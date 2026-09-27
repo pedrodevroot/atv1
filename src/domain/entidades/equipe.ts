@@ -13,10 +13,12 @@ export interface DadosEquipe {
   status?: StatusEquipe;
   rodada?: number;
   criadaEm?: Date;
+  descartados?: readonly string[];
 }
 
 export class Equipe implements Visitavel {
   private readonly _membros: Map<Papel, MembroEquipe>;
+  private readonly _descartados: Set<string>;
 
   private constructor(
     readonly id: string,
@@ -26,8 +28,10 @@ export class Equipe implements Visitavel {
     private _status: StatusEquipe,
     private _rodada: number,
     readonly criadaEm: Date,
+    descartados: readonly string[],
   ) {
     this._membros = new Map(membros.map((membro) => [membro.papel, membro]));
+    this._descartados = new Set(descartados);
   }
 
   static criar(dados: DadosEquipe): Equipe {
@@ -43,11 +47,16 @@ export class Equipe implements Visitavel {
       dados.status ?? StatusEquipe.SUGERIDA,
       rodada,
       garantirData(dados.criadaEm ?? new Date(), 'Data de criação da equipe'),
+      dados.descartados ?? [],
     );
   }
 
   get status(): StatusEquipe {
     return this._status;
+  }
+
+  get profissionaisDescartados(): readonly string[] {
+    return [...this._descartados];
   }
 
   get rodada(): number {
@@ -91,6 +100,7 @@ export class Equipe implements Visitavel {
     const membro = this.obterMembro(papel);
     this.garantirNaoConfirmado(membro);
     this._membros.delete(papel);
+    this._descartados.add(membro.profissional.id);
     this._status = StatusEquipe.EM_FORMACAO;
     return membro;
   }
@@ -106,6 +116,14 @@ export class Equipe implements Visitavel {
       'O substituto deve entrar como sugestão.',
       'REGRA_VIOLADA',
     );
+    garantir(
+      !this._descartados.has(novo.profissional.id),
+      `${novo.profissional.nome} já foi descartado nesta equipe.`,
+      'REGRA_VIOLADA',
+    );
+    if (anterior) {
+      this._descartados.add(anterior.profissional.id);
+    }
     this._membros.set(novo.papel, novo);
     this._rodada += 1;
     this._status = StatusEquipe.EM_FORMACAO;

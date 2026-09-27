@@ -113,6 +113,22 @@ describe('Equipe', () => {
     expect(equipe.papeisVagos(REQUISITOS)).toEqual([]);
   });
 
+  it('lembra quem foi rejeitado ou substituído e não aceita essa pessoa de volta', () => {
+    const editorRejeitado = equipe.rejeitarMembro(Papel.EDITOR);
+    const diretorAnterior = equipe.membro(Papel.DIRETOR);
+    equipe.substituirMembro(criarMembro(Papel.DIRETOR));
+
+    expect(equipe.profissionaisDescartados).toEqual([
+      editorRejeitado.profissional.id,
+      diretorAnterior?.profissional.id,
+    ]);
+    expect(() =>
+      equipe.substituirMembro(
+        criarMembro(Papel.EDITOR, { profissional: editorRejeitado.profissional }),
+      ),
+    ).toThrow('já foi descartado nesta equipe');
+  });
+
   it('não remove nem substitui membro confirmado', () => {
     equipe.convidarMembro(Papel.DIRETOR);
     equipe.registrarRespostaConvite(Papel.DIRETOR, true);

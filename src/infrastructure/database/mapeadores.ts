@@ -192,6 +192,7 @@ export function deProjeto(projeto: Projeto): LinhasProjeto {
       rodada: equipe.rodada,
       criada_em: equipe.criadaEm,
       ordem,
+      descartados: [...equipe.profissionaisDescartados],
     })),
     membros: projeto.equipes.flatMap((equipe) =>
       equipe.membros.map((membro, ordem) => ({
@@ -227,6 +228,7 @@ export function paraProjeto(
       status: equipe.status as StatusEquipe,
       rodada: equipe.rodada,
       criadaEm: equipe.criada_em,
+      descartados: equipe.descartados,
       membros: linhas.membros
         .filter((membro) => membro.equipe_id === equipe.id)
         .sort((a, b) => a.ordem - b.ordem)
