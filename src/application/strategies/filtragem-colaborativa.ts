@@ -1,3 +1,4 @@
+import { mesmoTexto } from '../../domain/comum/texto.js';
 import type { Avaliacao } from '../../domain/entidades/avaliacao.js';
 import type { Profissional } from '../../domain/entidades/profissional.js';
 import type { Projeto } from '../../domain/entidades/projeto.js';
@@ -31,9 +32,8 @@ export class FiltragemColaborativa implements EstrategiaRecomendacao {
       parametros,
       filtros: this.filtros,
       folgaTeto: parametros.folgaTetoPapel,
-      avaliadorPara:
-        ({ papel }) =>
-        (profissional) => {
+      avaliadorPara: ({ papel }) => {
+        const componentes = (profissional: Profissional) => {
           let somaPesos = 0;
           let somaNotas = 0;
           let similares = 0;
@@ -48,11 +48,16 @@ export class FiltragemColaborativa implements EstrategiaRecomendacao {
           const mediaBayesiana =
             (configuracao.pesoPriori * configuracao.mediaPriori + somaNotas) /
             (configuracao.pesoPriori + somaPesos);
-          return {
-            score: normalizarNota(mediaBayesiana),
-            justificativa: `média bayesiana ${formatar(mediaBayesiana)} de ${profissional.totalAvaliacoes} avaliação(ões), ${similares} em projetos similares`,
-          };
-        },
+          return { mediaBayesiana, similares };
+        };
+        return {
+          pontuar: (profissional) => normalizarNota(componentes(profissional).mediaBayesiana),
+          justificar: (profissional) => {
+            const { mediaBayesiana, similares } = componentes(profissional);
+            return `média bayesiana ${formatar(mediaBayesiana)} de ${profissional.totalAvaliacoes} avaliação(ões), ${similares} em projetos similares`;
+          },
+        };
+      },
     });
   }
 }
@@ -63,8 +68,7 @@ function pesoDaAvaliacao(
   papel: Papel,
   configuracao: ParametrosColaborativa,
 ): number {
-  const mesmoGenero =
-    avaliacao.genero.localeCompare(projeto.genero, 'pt-BR', { sensitivity: 'base' }) === 0;
+  const mesmoGenero = mesmoTexto(avaliacao.genero, projeto.genero);
   return (
     1 +
     (mesmoGenero ? configuracao.bonusMesmoGenero : 0) +

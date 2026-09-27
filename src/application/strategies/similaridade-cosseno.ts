@@ -26,7 +26,8 @@ export class SimilaridadeCosseno implements EstrategiaRecomendacao {
     profissionais: readonly Profissional[],
     parametros: ParametrosRecomendacao,
   ): RankingPorPapel {
-    const { pesoSimilaridade, pesoExperiencia, experienciaSaturacao } = parametros.cosseno;
+    const { pesoSimilaridade, pesoAderencia, pesoExperiencia, experienciaSaturacao } =
+      parametros.cosseno;
     return ranquearPorPapel({
       projeto,
       profissionais,
@@ -35,17 +36,26 @@ export class SimilaridadeCosseno implements EstrategiaRecomendacao {
       folgaTeto: parametros.folgaTetoPapel,
       avaliadorPara: ({ papel }) => {
         const perfilIdeal = this.catalogo.perfilPara(papel, projeto.tipoCaptacao);
-        return (profissional) => {
+        const componentes = (profissional: Profissional) => {
           const similaridade = perfilIdeal.similaridadeCosseno(profissional.vetorCompetencias);
+          const aderencia = profissional.vetorCompetencias.aderenciaA(perfilIdeal);
           const projetosNoPapel = profissional.experienciaComo(papel);
           const experiencia = Math.min(1, projetosNoPapel / Math.max(1, experienciaSaturacao));
-          return {
-            score: mediaPonderada([
+          return { similaridade, aderencia, projetosNoPapel, experiencia };
+        };
+        return {
+          pontuar: (profissional) => {
+            const { similaridade, aderencia, experiencia } = componentes(profissional);
+            return mediaPonderada([
               [similaridade, pesoSimilaridade],
+              [aderencia, pesoAderencia],
               [experiencia, pesoExperiencia],
-            ]),
-            justificativa: `cosseno ${formatar(similaridade)}; ${projetosNoPapel} projeto(s) como ${papel}`,
-          };
+            ]);
+          },
+          justificar: (profissional) => {
+            const { similaridade, aderencia, projetosNoPapel } = componentes(profissional);
+            return `cosseno ${formatar(similaridade)}; aderência ${formatar(aderencia)}; ${projetosNoPapel} projeto(s) como ${papel}`;
+          },
         };
       },
     });

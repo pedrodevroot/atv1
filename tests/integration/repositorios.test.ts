@@ -282,13 +282,15 @@ describe('Repositórios TypeORM com PostgreSQL real', () => {
         tipoAtor: 'PROFISSIONAL',
         dados: { papel: 'EDITOR' },
       });
-      await caixa.entregar({
-        destinatarioId: 'prof-1',
-        tipoDestinatario: 'PROFISSIONAL',
-        assunto: 'Convite',
-        corpo: 'Você foi convidado.',
-        eventoId: 'e-1',
-      });
+      await caixa.entregar([
+        {
+          destinatarioId: 'prof-1',
+          tipoDestinatario: 'PROFISSIONAL',
+          assunto: 'Convite',
+          corpo: 'Você foi convidado.',
+          eventoId: 'e-1',
+        },
+      ]);
 
       expect(await auditoria.listarPorProjeto('p-1')).toEqual([
         expect.objectContaining({

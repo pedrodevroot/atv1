@@ -38,7 +38,9 @@ import {
   RegistroAuditoriaLog,
   ServicoEmailSimulado,
 } from './infrastructure/notifications/canais-simulados.js';
+import { RepositorioProfissionaisResiliente } from './infrastructure/repositories/repositorio-profissionais-resiliente.js';
 import { RepositorioProfissionaisTypeorm } from './infrastructure/repositories/repositorio-profissionais-typeorm.js';
+import { DisjuntorCircuito } from './infrastructure/resiliencia/disjuntor.js';
 import { RepositorioProjetosTypeorm } from './infrastructure/repositories/repositorio-projetos-typeorm.js';
 import {
   CaixaMensagensTypeorm,
@@ -75,6 +77,7 @@ export interface Container extends DependenciasApi {
   readonly parametros: ParametrosRecomendacao;
   readonly registroEstrategias: RegistroEstrategias;
   readonly repositorioProfissionais: RepositorioProfissionaisTypeorm;
+  readonly cadastroProfissionais: RepositorioProfissionaisResiliente;
   readonly repositorioProjetos: RepositorioProjetosTypeorm;
   readonly repositorioConvites: RepositorioConvitesTypeorm;
   readonly repositorioRecomendacoes: RepositorioRecomendacoesTypeorm;
@@ -134,15 +137,29 @@ export function criarContainer(
 ): Container {
   const relogio = opcoes.relogio ?? relogioDoSistema;
   const dataSource = criarDataSource(config.banco);
-  const consultarSaude = new ConsultarSaude([new VerificadorBanco(dataSource)]);
   const parametros = resolverParametros();
   const registroEstrategias = criarRegistroEstrategias();
   const repositorioProfissionais = new RepositorioProfissionaisTypeorm(dataSource);
+  const cadastroProfissionais = new RepositorioProfissionaisResiliente(
+    repositorioProfissionais,
+    new DisjuntorCircuito({
+      nome: 'cadastro-profissionais',
+      limiteFalhas: config.resiliencia.circuitoLimiteFalhas,
+      esperaMs: config.resiliencia.circuitoEsperaMs,
+    }),
+    { ttlMs: config.resiliencia.cacheTtlMs, timeoutMs: config.resiliencia.cadastroTimeoutMs },
+    relogioDoSistema,
+    logger,
+  );
+  const consultarSaude = new ConsultarSaude([
+    new VerificadorBanco(dataSource),
+    cadastroProfissionais,
+  ]);
   const repositorioProjetos = new RepositorioProjetosTypeorm(dataSource, repositorioProfissionais);
   const repositorioConvites = new RepositorioConvitesTypeorm(dataSource);
   const repositorioRecomendacoes = new RepositorioRecomendacoesTypeorm(dataSource);
-  const orquestradorPadrao = new OrquestradorPadrao(repositorioProfissionais, relogio);
-  const orquestradorSubstituicao = new OrquestradorSubstituicao(repositorioProfissionais, relogio);
+  const orquestradorPadrao = new OrquestradorPadrao(cadastroProfissionais, relogio);
+  const orquestradorSubstituicao = new OrquestradorSubstituicao(cadastroProfissionais, relogio);
   const barramento = new BarramentoEventosEmMemoria((falha) => {
     logger.error(
       {
@@ -193,6 +210,7 @@ export function criarContainer(
     parametros,
     registroEstrategias,
     repositorioProfissionais,
+    cadastroProfissionais,
     repositorioProjetos,
     repositorioConvites,
     repositorioRecomendacoes,

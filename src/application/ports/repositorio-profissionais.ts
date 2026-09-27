@@ -18,3 +18,7 @@ export interface ResultadoBusca {
 export interface RepositorioProfissionais {
   buscarCandidatos(criterios: CriteriosBusca): Promise<ResultadoBusca>;
 }
+
+export interface FonteCadastroProfissionais {
+  listarAtivos(): Promise<Profissional[]>;
+}

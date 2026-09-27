@@ -62,7 +62,7 @@ describe('SimilaridadeCosseno', () => {
     const cadastro = criarCadastroDemonstracao();
     const estrategia = new SimilaridadeCosseno();
     const soExperiencia = resolverParametros({
-      cosseno: { pesoSimilaridade: 0, pesoExperiencia: 1 },
+      cosseno: { pesoSimilaridade: 0, pesoAderencia: 0, pesoExperiencia: 1 },
     });
 
     const local = (parametros: typeof padrao) =>
@@ -71,7 +71,7 @@ describe('SimilaridadeCosseno', () => {
       )?.score;
 
     expect(local(soExperiencia)).toBe(0.2);
-    expect(local(padrao)).toBeGreaterThan(0.7);
+    expect(local(padrao)).toBeCloseTo(0.5, 1);
   });
 
   it('aceita catálogo e filtros injetados', () => {

@@ -60,7 +60,7 @@ describe('resolverParametros', () => {
       resolverParametros({
         topN: 0,
         folgaTetoPapel: -1,
-        cosseno: { pesoSimilaridade: 0, pesoExperiencia: 0 },
+        cosseno: { pesoSimilaridade: 0, pesoAderencia: 0, pesoExperiencia: 0 },
         orcamento: { pesoEconomia: 0, pesoNota: 0, pesoProximidade: 0 },
       });
 
@@ -138,7 +138,7 @@ describe('ranquearPorPapel', () => {
       parametros: PARAMETROS_PADRAO,
       filtros: FILTROS_PADRAO,
       folgaTeto: 0,
-      avaliadorPara: () => () => ({ score: 1.7, justificativa: 'fixo' }),
+      avaliadorPara: () => ({ pontuar: () => 1.7, justificar: () => 'fixo' }),
     });
 
     const diretores = ranking.get(Papel.DIRETOR) ?? [];

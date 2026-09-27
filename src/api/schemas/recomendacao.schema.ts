@@ -21,7 +21,12 @@ export const ParametrosSchema = Type.Object(
   {
     topN: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
     folgaTetoPapel: Type.Optional(NaoNegativo),
-    cosseno: grupoNumerico(['pesoSimilaridade', 'pesoExperiencia', 'experienciaSaturacao']),
+    cosseno: grupoNumerico([
+      'pesoSimilaridade',
+      'pesoAderencia',
+      'pesoExperiencia',
+      'experienciaSaturacao',
+    ]),
     colaborativa: grupoNumerico([
       'mediaPriori',
       'pesoPriori',

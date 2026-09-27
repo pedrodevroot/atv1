@@ -13,7 +13,7 @@ export interface ServicoEmail {
 }
 
 export interface CaixaMensagens {
-  entregar(notificacao: Notificacao): Promise<void>;
+  entregar(notificacoes: readonly Notificacao[]): Promise<void>;
 }
 
 export interface EntradaAuditoria {

@@ -128,16 +128,18 @@ export class RegistroAuditoriaTypeorm implements RegistroAuditoria {
 export class CaixaMensagensTypeorm implements CaixaMensagens {
   constructor(private readonly dataSource: DataSource) {}
 
-  async entregar(notificacao: Notificacao): Promise<void> {
-    await inserir(this.dataSource.manager, MensagemInternaSchema, [
-      {
+  async entregar(notificacoes: readonly Notificacao[]): Promise<void> {
+    await inserir(
+      this.dataSource.manager,
+      MensagemInternaSchema,
+      notificacoes.map((notificacao) => ({
         destinatario_id: notificacao.destinatarioId,
         tipo_destinatario: notificacao.tipoDestinatario,
         assunto: notificacao.assunto,
         corpo: notificacao.corpo,
         evento_id: notificacao.eventoId,
-      },
-    ]);
+      })),
+    );
   }
 
   async mensagensDe(destinatarioId: string): Promise<Notificacao[]> {

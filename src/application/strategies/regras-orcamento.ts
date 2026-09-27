@@ -32,9 +32,8 @@ export class RegrasOrcamento implements EstrategiaRecomendacao {
       parametros,
       filtros: this.filtros,
       folgaTeto: regras.folgaTeto,
-      avaliadorPara:
-        ({ teto }) =>
-        (profissional) => {
+      avaliadorPara: ({ teto }) => {
+        const componentes = (profissional: Profissional) => {
           const custo = profissional.faixaPreco.precoNegociado(teto);
           const economia = teto > 0 ? limitarEntreZeroEUm(1 - custo / teto) : 0;
           const nota =
@@ -46,15 +45,23 @@ export class RegrasOrcamento implements EstrategiaRecomendacao {
             projeto.localizacao,
             regras.raioKm,
           );
-          return {
-            score: mediaPonderada([
+          return { custo, economia, nota, proximidade };
+        };
+        return {
+          pontuar: (profissional) => {
+            const { economia, nota, proximidade } = componentes(profissional);
+            return mediaPonderada([
               [economia, regras.pesoEconomia],
               [nota, regras.pesoNota],
               [proximidade, regras.pesoProximidade],
-            ]),
-            justificativa: `custo ${formatar(custo)} de teto ${formatar(teto)}; nota ${formatar(nota)}; proximidade ${formatar(proximidade)}`,
-          };
-        },
+            ]);
+          },
+          justificar: (profissional) => {
+            const { custo, nota, proximidade } = componentes(profissional);
+            return `custo ${formatar(custo)} de teto ${formatar(teto)}; nota ${formatar(nota)}; proximidade ${formatar(proximidade)}`;
+          },
+        };
+      },
     });
   }
 }

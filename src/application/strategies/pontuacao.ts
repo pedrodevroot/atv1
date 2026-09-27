@@ -1,10 +1,5 @@
 import { NOTA_MAXIMA, NOTA_MINIMA } from '../../domain/entidades/avaliacao.js';
 
-export interface Pontuacao {
-  readonly score: number;
-  readonly justificativa: string;
-}
-
 export function limitarEntreZeroEUm(valor: number): number {
   if (Number.isNaN(valor)) {
     return 0;

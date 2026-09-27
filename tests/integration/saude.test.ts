@@ -17,13 +17,22 @@ describe('GET /health com PostgreSQL real', () => {
     await app.close();
   });
 
-  it('reporta o banco como disponível', async () => {
-    const resposta = await app.inject({ method: 'GET', url: '/health' });
+  it('fica degradado até o cache do cadastro carregar e ok depois disso', async () => {
+    const antes = await app.inject({ method: 'GET', url: '/health' });
+    if (!container.dataSource.isInitialized) {
+      await container.dataSource.initialize();
+    }
+    await container.cadastroProfissionais.aquecer();
+    const depois = await app.inject({ method: 'GET', url: '/health' });
 
-    expect(resposta.statusCode).toBe(200);
-    expect(resposta.json()).toMatchObject({
+    expect(antes.json()).toMatchObject({
+      status: 'degradado',
+      dependencias: { postgres: 'disponivel', 'cadastro-profissionais': 'indisponivel' },
+    });
+    expect(depois.statusCode).toBe(200);
+    expect(depois.json()).toMatchObject({
       status: 'ok',
-      dependencias: { postgres: 'disponivel' },
+      dependencias: { postgres: 'disponivel', 'cadastro-profissionais': 'disponivel' },
     });
   });
 

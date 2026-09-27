@@ -11,6 +11,7 @@
     "dev": "tsx watch src/server.ts",
     "build": "rimraf dist && tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
+    "start:cluster": "node dist/cluster.js",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
@@ -29,7 +30,8 @@
     "migration:run": "tsx src/infrastructure/database/scripts/migrar.ts",
     "migration:revert": "tsx src/infrastructure/database/scripts/reverter-migracao.ts",
     "seed": "tsx src/infrastructure/database/scripts/semear.ts",
-    "perf": "tsx tests/perf/carga.ts"
+    "perf": "tsx tests/perf/carga.ts",
+    "precisao": "tsx tests/perf/precisao.ts"
   },
   "repository": {
     "type": "git",

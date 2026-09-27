@@ -15,6 +15,7 @@ app.addHook('onClose', async () => {
 
 try {
   await container.dataSource.initialize();
+  await container.cadastroProfissionais.aquecer();
 } catch (erro) {
   app.log.warn({ err: erro }, 'Banco indisponível na inicialização; serviço em modo degradado');
 }
