@@ -1,4 +1,5 @@
-export type CodigoErroAplicacao = 'ESTRATEGIA_DESCONHECIDA' | 'PARAMETROS_INVALIDOS';
+export type CodigoErroAplicacao =
+  'ESTRATEGIA_DESCONHECIDA' | 'PARAMETROS_INVALIDOS' | 'RESTRICAO_VIOLADA' | 'FLUXO_INVARIAVEL';
 
 export class ErroAplicacao extends Error {
   constructor(
