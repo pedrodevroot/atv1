@@ -31,7 +31,7 @@ export class RepositorioProjetosTypeorm implements RepositorioProjetos {
         [id],
       ),
       this.dataSource.query<LinhasProjetoLidas['equipes']>(
-        'SELECT * FROM equipe WHERE projeto_id = $1 ORDER BY criada_em, id',
+        'SELECT * FROM equipe WHERE projeto_id = $1 ORDER BY ordem, criada_em, id',
         [id],
       ),
       this.dataSource.query<LinhasProjetoLidas['membros']>(

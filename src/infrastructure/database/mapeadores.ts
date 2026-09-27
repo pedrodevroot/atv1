@@ -184,13 +184,14 @@ export function deProjeto(projeto: Projeto): LinhasProjeto {
       peso: requisito.peso,
       ordem,
     })),
-    equipes: projeto.equipes.map((equipe) => ({
+    equipes: projeto.equipes.map((equipe, ordem) => ({
       id: equipe.id,
       projeto_id: projeto.id,
       estrategia: equipe.estrategia,
       status: equipe.status,
       rodada: equipe.rodada,
       criada_em: equipe.criadaEm,
+      ordem,
     })),
     membros: projeto.equipes.flatMap((equipe) =>
       equipe.membros.map((membro, ordem) => ({

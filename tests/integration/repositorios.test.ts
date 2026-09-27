@@ -22,7 +22,8 @@ import {
   criarCadastroDemonstracao,
   criarProjetoDemonstracao,
 } from '../fixtures/cadastro-demonstracao.js';
-import { criarProfissional, criarProjeto } from '../fixtures/dominio.js';
+import { migracoes } from '../../src/infrastructure/database/migrations/index.js';
+import { criarEquipe, criarMembro, criarProfissional, criarProjeto } from '../fixtures/dominio.js';
 import {
   ID_EDITOR_ECONOMICO,
   criarEditorEconomico,
@@ -192,6 +193,32 @@ describe('Repositórios TypeORM com PostgreSQL real', () => {
         lido?.equipes.filter((equipe) => equipe.status === StatusEquipe.DESCARTADA),
       ).toHaveLength(2);
     });
+
+    it('preserva a ordem das sugestões mesmo com o mesmo instante de criação', async () => {
+      const projeto = criarProjeto();
+      const mesmoInstante = new Date('2026-09-27T12:00:00.000Z');
+      const idsEmOrdemDeCriacao = ['z-primeira', 'm-segunda', 'a-terceira'];
+      const diretor = (await profissionais.obterPorIds([IDS_DEMONSTRACAO.DIRETOR_LOCAL])).get(
+        IDS_DEMONSTRACAO.DIRETOR_LOCAL,
+      );
+      if (!diretor) {
+        throw new Error('diretor não salvo');
+      }
+      projeto.registrarSugestoes(
+        idsEmOrdemDeCriacao.map((id) =>
+          criarEquipe(projeto, {
+            id,
+            criadaEm: mesmoInstante,
+            membros: [criarMembro(Papel.DIRETOR, { profissional: diretor })],
+          }),
+        ),
+      );
+
+      await projetos.salvar(projeto);
+      const lido = await projetos.obter(projeto.id);
+
+      expect(lido?.equipes.map((equipe) => equipe.id)).toEqual(idsEmOrdemDeCriacao);
+    });
   });
 
   describe('convites, recomendações, auditoria e mensagens internas', () => {
@@ -291,8 +318,10 @@ describe('Repositórios TypeORM com PostgreSQL real', () => {
       expect(primeira.length).toBeGreaterThan(100);
     });
 
-    it('a migration pode ser revertida e reaplicada', async () => {
-      await dataSource.undoLastMigration({ transaction: 'each' });
+    it('todas as migrations podem ser revertidas e reaplicadas', async () => {
+      for (let indice = 0; indice < migracoes.length; indice += 1) {
+        await dataSource.undoLastMigration({ transaction: 'each' });
+      }
       const [depoisDoDown] = await dataSource.query<{ existe: string | null }[]>(
         "SELECT to_regclass('profissional') AS existe",
       );

@@ -32,6 +32,7 @@ export interface EquipeRow {
   status: string;
   rodada: number;
   criada_em: Date;
+  ordem: number;
 }
 
 export interface MembroEquipeRow {
@@ -121,6 +122,7 @@ export const EquipeSchema = new EntitySchema<EquipeRow>({
     status,
     rodada: { type: 'integer' },
     criada_em: { type: 'timestamptz' },
+    ordem: { type: 'integer', default: 0 },
   },
 });
 
