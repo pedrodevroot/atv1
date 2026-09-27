@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { carregarConfig, type Config } from '../../../src/config/config.js';
-import { criarOpcoesLogger } from '../../../src/infrastructure/logging/opcoes-logger.js';
+import {
+  criarLogger,
+  criarOpcoesLogger,
+} from '../../../src/infrastructure/logging/opcoes-logger.js';
 
 function config(ambiente: Config['ambiente']): Config {
   return carregarConfig({
@@ -13,8 +16,9 @@ function config(ambiente: Config['ambiente']): Config {
 }
 
 describe('criarOpcoesLogger', () => {
-  it('desliga o logger em testes', () => {
-    expect(criarOpcoesLogger(config('test'))).toBe(false);
+  it('silencia o logger em testes', () => {
+    expect(criarOpcoesLogger(config('test')).level).toBe('silent');
+    expect(criarLogger(config('test')).level).toBe('silent');
   });
 
   it('usa pino-pretty em desenvolvimento', () => {

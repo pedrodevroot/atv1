@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
-import Fastify, { type FastifyServerOptions } from 'fastify';
+import Fastify, { type FastifyBaseLogger } from 'fastify';
 import { tratarErro } from './api/erros/tratador-erros.js';
 import { rotasSaude } from './api/routes/saude.routes.js';
 import { RespostaErro } from './api/schemas/comum.schema.js';
@@ -13,12 +13,12 @@ export interface DependenciasApi {
 }
 
 export interface OpcoesApp {
-  logger?: FastifyServerOptions['logger'];
+  logger?: FastifyBaseLogger;
 }
 
 export async function construirApp(dependencias: DependenciasApi, opcoes: OpcoesApp = {}) {
   const app = Fastify({
-    logger: opcoes.logger ?? false,
+    ...(opcoes.logger ? { loggerInstance: opcoes.logger } : { logger: false }),
     requestIdHeader: 'x-request-id',
     genReqId: () => randomUUID(),
   }).withTypeProvider<TypeBoxTypeProvider>();
