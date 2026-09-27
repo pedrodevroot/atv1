@@ -88,6 +88,12 @@ describe('FaixaPreco', () => {
     expect(faixa.cabeNoOrcamento(4_999)).toBe(false);
   });
 
+  it('negocia o preço dentro do teto sem passar da média nem ficar abaixo do mínimo', () => {
+    expect(faixa.precoNegociado(50_000)).toBe(10_000);
+    expect(faixa.precoNegociado(7_000)).toBe(7_000);
+    expect(faixa.precoNegociado(1_000)).toBe(5_000);
+  });
+
   it('rejeita mínimo negativo e máximo menor que o mínimo', () => {
     expect(() => FaixaPreco.criar(-1, 10)).toThrow(ErroDominio);
     expect(() => FaixaPreco.criar(10, 5)).toThrow(
