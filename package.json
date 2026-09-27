@@ -17,6 +17,7 @@
     "test": "vitest run",
     "test:unit": "vitest run --project unit",
     "test:int": "vitest run --project integration",
+    "test:desempenho": "vitest run --project desempenho",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
     "db:up": "docker compose up -d --wait postgres",
