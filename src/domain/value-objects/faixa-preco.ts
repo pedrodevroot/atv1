@@ -29,4 +29,8 @@ export class FaixaPreco {
   cabeNoOrcamento(teto: number): boolean {
     return this.minimo <= teto;
   }
+
+  precoNegociado(teto: number): number {
+    return Math.min(this.media, Math.max(this.minimo, teto));
+  }
 }
