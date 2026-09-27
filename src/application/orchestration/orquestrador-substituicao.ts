@@ -93,6 +93,10 @@ export class OrquestradorSubstituicao extends OrquestradorEquipe<EntradaSubstitu
   }
 
   private idsExcluidos(entrada: EntradaSubstituicao): Set<string> {
-    return new Set(this.equipeDe(entrada).membros.map((membro) => membro.profissional.id));
+    const equipe = this.equipeDe(entrada);
+    return new Set([
+      ...equipe.membros.map((membro) => membro.profissional.id),
+      ...equipe.profissionaisDescartados,
+    ]);
   }
 }

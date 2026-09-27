@@ -1,4 +1,5 @@
 import type { Projeto } from '../../domain/entidades/projeto.js';
+import type { Recomendacao } from '../../domain/entidades/recomendacao.js';
 import {
   criarEvento,
   type EventoDoTipo,
@@ -9,6 +10,7 @@ import { eventoRecomendacaoGerada } from '../eventos/fabrica-eventos.js';
 import type { OrquestradorSubstituicao } from '../orchestration/orquestrador-substituicao.js';
 import type { Observador, Sujeito } from '../ports/observador.js';
 import type { RepositorioProjetos } from '../ports/repositorio-projetos.js';
+import type { RepositorioRecomendacoes } from '../ports/repositorio-recomendacoes.js';
 import type { ParametrosRecomendacao } from '../strategies/parametros-recomendacao.js';
 import type { RegistroEstrategias } from '../strategies/registro-estrategias.js';
 
@@ -16,6 +18,7 @@ export const ORIGEM_ATUALIZADOR = 'atualizador-composicao';
 
 export interface DependenciasAtualizador {
   readonly projetos: RepositorioProjetos;
+  readonly recomendacoes?: RepositorioRecomendacoes;
   readonly substituicao: OrquestradorSubstituicao;
   readonly estrategias: RegistroEstrategias;
   readonly parametros: ParametrosRecomendacao;
@@ -43,10 +46,13 @@ export class AtualizadorComposicao implements Observador {
 
     const aceito = evento.tipo === 'CONVITE_ACEITO';
     projeto.registrarRespostaConvite(equipeId, papel, aceito);
-    const eventosSeguintes = aceito ? [] : await this.iniciarNovaRodada(projeto, evento);
+    const rodada = aceito
+      ? { eventos: [], recomendacoes: [] }
+      : await this.iniciarNovaRodada(projeto, evento);
 
     await projetos.salvar(projeto);
-    for (const seguinte of eventosSeguintes) {
+    await this.dependencias.recomendacoes?.salvarTodas(rodada.recomendacoes);
+    for (const seguinte of rodada.eventos) {
       sujeito.notificarObservadores(seguinte);
     }
   }
@@ -54,7 +60,7 @@ export class AtualizadorComposicao implements Observador {
   private async iniciarNovaRodada(
     projeto: Projeto,
     evento: RespostaConvite,
-  ): Promise<EventoRecomendacao[]> {
+  ): Promise<{ eventos: EventoRecomendacao[]; recomendacoes: readonly Recomendacao[] }> {
     const { substituicao, estrategias, parametros } = this.dependencias;
     const { projetoId, produtorId, equipeId, papel, profissionalId } = evento.dados;
     const opcoes = { origem: ORIGEM_ATUALIZADOR, correlacaoId: evento.correlacaoId ?? evento.id };
@@ -89,6 +95,6 @@ export class AtualizadorComposicao implements Observador {
         ),
       );
     }
-    return eventos;
+    return { eventos, recomendacoes: resultado.recomendacoes };
   }
 }

@@ -23,6 +23,8 @@ import {
 import { RegistroEstrategias } from './application/strategies/registro-estrategias.js';
 import { RegrasOrcamento } from './application/strategies/regras-orcamento.js';
 import { SimilaridadeCosseno } from './application/strategies/similaridade-cosseno.js';
+import { relogioDoSistema, type Relogio } from './application/ports/relogio.js';
+import { criarCasosDeUso } from './application/use-cases/casos-de-uso.js';
 import { ConsultarSaude } from './application/use-cases/consultar-saude.js';
 import type { DependenciasApi } from './app.js';
 import type { Config } from './config/config.js';
@@ -121,7 +123,16 @@ export function registrarObservadores(sujeito: Sujeito, observadores: readonly O
   }
 }
 
-export function criarContainer(config: Config, logger: Pino = criarLogger(config)): Container {
+export interface OpcoesContainer {
+  readonly relogio?: Relogio;
+}
+
+export function criarContainer(
+  config: Config,
+  logger: Pino = criarLogger(config),
+  opcoes: OpcoesContainer = {},
+): Container {
+  const relogio = opcoes.relogio ?? relogioDoSistema;
   const dataSource = criarDataSource(config.banco);
   const consultarSaude = new ConsultarSaude([new VerificadorBanco(dataSource)]);
   const parametros = resolverParametros();
@@ -130,8 +141,8 @@ export function criarContainer(config: Config, logger: Pino = criarLogger(config
   const repositorioProjetos = new RepositorioProjetosTypeorm(dataSource, repositorioProfissionais);
   const repositorioConvites = new RepositorioConvitesTypeorm(dataSource);
   const repositorioRecomendacoes = new RepositorioRecomendacoesTypeorm(dataSource);
-  const orquestradorPadrao = new OrquestradorPadrao(repositorioProfissionais);
-  const orquestradorSubstituicao = new OrquestradorSubstituicao(repositorioProfissionais);
+  const orquestradorPadrao = new OrquestradorPadrao(repositorioProfissionais, relogio);
+  const orquestradorSubstituicao = new OrquestradorSubstituicao(repositorioProfissionais, relogio);
   const barramento = new BarramentoEventosEmMemoria((falha) => {
     logger.error(
       {
@@ -151,14 +162,30 @@ export function criarContainer(config: Config, logger: Pino = criarLogger(config
   };
   const atualizador = new AtualizadorComposicao({
     projetos: repositorioProjetos,
+    recomendacoes: repositorioRecomendacoes,
     substituicao: orquestradorSubstituicao,
     estrategias: registroEstrategias,
     parametros,
     sujeito: barramento,
   });
   registrarObservadores(barramento, criarObservadores({ canais, atualizador }));
+  const casos = criarCasosDeUso(
+    {
+      projetos: repositorioProjetos,
+      convites: repositorioConvites,
+      recomendacoes: repositorioRecomendacoes,
+      estrategias: registroEstrategias,
+      parametros,
+      orquestradorPadrao,
+      orquestradorSubstituicao,
+      sujeito: barramento,
+      relogio,
+    },
+    { auditoria: canais.auditoria, mensagens: canais.caixa },
+  );
 
   return {
+    casos,
     config,
     logger,
     dataSource,

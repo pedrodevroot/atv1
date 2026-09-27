@@ -4,12 +4,16 @@ import swaggerUi from '@fastify/swagger-ui';
 import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import Fastify, { type FastifyBaseLogger } from 'fastify';
 import { tratarErro } from './api/erros/tratador-erros.js';
+import { rotasConvitesECatalogo } from './api/routes/convites.routes.js';
+import { rotasProjetos } from './api/routes/projetos.routes.js';
 import { rotasSaude } from './api/routes/saude.routes.js';
 import { RespostaErro } from './api/schemas/comum.schema.js';
+import type { CasosDeUso } from './application/use-cases/casos-de-uso.js';
 import type { ConsultarSaude } from './application/use-cases/consultar-saude.js';
 
 export interface DependenciasApi {
   consultarSaude: ConsultarSaude;
+  casos: CasosDeUso;
 }
 
 export interface OpcoesApp {
@@ -33,13 +37,25 @@ export async function construirApp(dependencias: DependenciasApi, opcoes: Opcoes
     openapi: {
       info: {
         title: 'CineBridge - Recomendação e Orquestração de Equipes',
-        version: '0.1.0',
+        description:
+          'Microsserviço que recomenda e orquestra equipes audiovisuais usando Strategy, Template Method, Observer e Visitor.',
+        version: '1.0.0',
       },
+      tags: [
+        { name: 'projetos', description: 'Criação, recomendação e reavaliação' },
+        { name: 'equipes', description: 'Aceite, rejeição, substituição e finalização' },
+        { name: 'convites', description: 'Resposta dos profissionais' },
+        { name: 'relatorios', description: 'Visitors e auditoria' },
+        { name: 'catalogo', description: 'Estratégias e mensagens internas' },
+        { name: 'saude', description: 'Estado do serviço' },
+      ],
     },
   });
   await app.register(swaggerUi, { routePrefix: '/docs' });
 
   await app.register(rotasSaude(dependencias.consultarSaude));
+  await app.register(rotasProjetos(dependencias.casos));
+  await app.register(rotasConvitesECatalogo(dependencias.casos));
 
   return app;
 }

@@ -2,6 +2,7 @@ import Type from 'typebox';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { construirApp, type App } from '../../../src/app.js';
 import { ConsultarSaude } from '../../../src/application/use-cases/consultar-saude.js';
+import { criarCasosMemoria } from '../../fixtures/api.js';
 
 describe('API HTTP', () => {
   let app: App;
@@ -10,8 +11,13 @@ describe('API HTTP', () => {
     const consultarSaude = new ConsultarSaude([
       { nome: 'postgres', verificar: () => Promise.resolve(false) },
     ]);
-    app = await construirApp({ consultarSaude });
+    app = await construirApp({ consultarSaude, casos: criarCasosMemoria().casos });
 
+    app.get('/teste/indisponivel', async () => {
+      throw Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:5434'), {
+        code: 'ECONNREFUSED',
+      });
+    });
     app.post(
       '/teste/validacao',
       { schema: { body: Type.Object({ nome: Type.String({ minLength: 3 }) }) } },
@@ -85,6 +91,14 @@ describe('API HTTP', () => {
       codigo: 'ERRO_INTERNO',
       mensagem: 'Erro interno do servidor.',
     });
+  });
+
+  it('responde 503 com retry-after quando uma dependência está fora do ar', async () => {
+    const resposta = await app.inject({ method: 'GET', url: '/teste/indisponivel' });
+
+    expect(resposta.statusCode).toBe(503);
+    expect(resposta.headers['retry-after']).toBe('5');
+    expect(resposta.json()).toMatchObject({ codigo: 'SERVICO_INDISPONIVEL' });
   });
 
   it('preserva status e código de erros de cliente', async () => {
