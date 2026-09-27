@@ -1,0 +1,96 @@
+import Type from 'typebox';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { construirApp, type App } from '../../../src/app.js';
+import { ConsultarSaude } from '../../../src/application/use-cases/consultar-saude.js';
+
+describe('API HTTP', () => {
+  let app: App;
+
+  beforeEach(async () => {
+    const consultarSaude = new ConsultarSaude([
+      { nome: 'postgres', verificar: () => Promise.resolve(false) },
+    ]);
+    app = await construirApp({ consultarSaude });
+
+    app.post(
+      '/teste/validacao',
+      { schema: { body: Type.Object({ nome: Type.String({ minLength: 3 }) }) } },
+      async () => ({ ok: true }),
+    );
+    app.get('/teste/falha', async () => {
+      throw new Error('segredo interno');
+    });
+    app.get('/teste/conflito', async () => {
+      throw Object.assign(new Error('Recurso em conflito'), { statusCode: 409, code: 'CONFLITO' });
+    });
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it('GET /health responde 200 com o estado degradado das dependências', async () => {
+    const resposta = await app.inject({ method: 'GET', url: '/health' });
+
+    expect(resposta.statusCode).toBe(200);
+    expect(resposta.json()).toMatchObject({
+      status: 'degradado',
+      dependencias: { postgres: 'indisponivel' },
+    });
+  });
+
+  it('propaga o x-request-id recebido', async () => {
+    const resposta = await app.inject({
+      method: 'GET',
+      url: '/health',
+      headers: { 'x-request-id': 'req-123' },
+    });
+
+    expect(resposta.headers['x-request-id']).toBe('req-123');
+  });
+
+  it('gera um x-request-id quando o cliente não envia', async () => {
+    const resposta = await app.inject({ method: 'GET', url: '/health' });
+
+    expect(resposta.headers['x-request-id']).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it('publica a documentação OpenAPI com a rota de saúde', async () => {
+    const resposta = await app.inject({ method: 'GET', url: '/docs/json' });
+    const documento = resposta.json<{ paths: Record<string, unknown> }>();
+
+    expect(resposta.statusCode).toBe(200);
+    expect(Object.keys(documento.paths)).toContain('/health');
+  });
+
+  it('padroniza erros de validação com status 400', async () => {
+    const resposta = await app.inject({
+      method: 'POST',
+      url: '/teste/validacao',
+      payload: { nome: 'ab' },
+    });
+
+    expect(resposta.statusCode).toBe(400);
+    expect(resposta.json()).toMatchObject({
+      codigo: 'REQUISICAO_INVALIDA',
+      detalhes: [expect.stringContaining('/nome')],
+    });
+  });
+
+  it('oculta detalhes de erros inesperados', async () => {
+    const resposta = await app.inject({ method: 'GET', url: '/teste/falha' });
+
+    expect(resposta.statusCode).toBe(500);
+    expect(resposta.json()).toEqual({
+      codigo: 'ERRO_INTERNO',
+      mensagem: 'Erro interno do servidor.',
+    });
+  });
+
+  it('preserva status e código de erros de cliente', async () => {
+    const resposta = await app.inject({ method: 'GET', url: '/teste/conflito' });
+
+    expect(resposta.statusCode).toBe(409);
+    expect(resposta.json()).toEqual({ codigo: 'CONFLITO', mensagem: 'Recurso em conflito' });
+  });
+});

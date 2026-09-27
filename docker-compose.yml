@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: cinebridge-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-cinebridge}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-cinebridge}
+      POSTGRES_DB: ${DB_NAME:-cinebridge}
+    ports:
+      - '${DB_PORT:-5434}:5432'
+    volumes:
+      - cinebridge-pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  cinebridge-pgdata:
