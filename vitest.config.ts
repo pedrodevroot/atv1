@@ -24,6 +24,17 @@ export default defineConfig({
           hookTimeout: 30_000,
         },
       },
+      {
+        extends: true,
+        test: {
+          name: 'desempenho',
+          include: ['tests/desempenho/**/*.test.ts'],
+          env: { NODE_ENV: 'test' },
+          fileParallelism: false,
+          testTimeout: 60_000,
+          sequence: { groupOrder: 1 },
+        },
+      },
     ],
     coverage: {
       provider: 'v8',
