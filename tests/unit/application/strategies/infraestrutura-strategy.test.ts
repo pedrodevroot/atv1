@@ -43,6 +43,18 @@ describe('resolverParametros', () => {
     expect(resolverParametros()).toEqual(PARAMETROS_PADRAO);
   });
 
+  it('valida os parâmetros de orquestração', () => {
+    expect(() => resolverParametros({ orquestracao: { numeroSugestoes: 11 } })).toThrow(
+      'orquestracao.numeroSugestoes deve ser inteiro entre 1 e 10',
+    );
+    expect(() => resolverParametros({ orquestracao: { scoreMinimo: 1.5 } })).toThrow(
+      'orquestracao.scoreMinimo deve ser <= 1',
+    );
+    expect(() => resolverParametros({ orquestracao: { custoMinimoPorPapel: -1 } })).toThrow(
+      'orquestracao.custoMinimoPorPapel deve ser um número >= 0',
+    );
+  });
+
   it('rejeita topN, números negativos e pesos todos zerados', () => {
     const erro = () =>
       resolverParametros({

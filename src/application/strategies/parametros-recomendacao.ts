@@ -24,12 +24,19 @@ export interface ParametrosOrcamento {
   limiteOrcamentoReduzido: number;
 }
 
+export interface ParametrosOrquestracao {
+  numeroSugestoes: number;
+  scoreMinimo: number;
+  custoMinimoPorPapel: number;
+}
+
 export interface ParametrosRecomendacao {
   topN: number;
   folgaTetoPapel: number;
   cosseno: ParametrosCosseno;
   colaborativa: ParametrosColaborativa;
   orcamento: ParametrosOrcamento;
+  orquestracao: ParametrosOrquestracao;
 }
 
 export interface ParametrosRecomendacaoParciais {
@@ -38,6 +45,7 @@ export interface ParametrosRecomendacaoParciais {
   cosseno?: Partial<ParametrosCosseno>;
   colaborativa?: Partial<ParametrosColaborativa>;
   orcamento?: Partial<ParametrosOrcamento>;
+  orquestracao?: Partial<ParametrosOrquestracao>;
 }
 
 export const PARAMETROS_PADRAO: Readonly<ParametrosRecomendacao> = Object.freeze({
@@ -60,6 +68,11 @@ export const PARAMETROS_PADRAO: Readonly<ParametrosRecomendacao> = Object.freeze
     raioKm: 300,
     limiteOrcamentoReduzido: 50_000,
   },
+  orquestracao: {
+    numeroSugestoes: 3,
+    scoreMinimo: 0.05,
+    custoMinimoPorPapel: 1_000,
+  },
 });
 
 export function resolverParametros(
@@ -71,6 +84,7 @@ export function resolverParametros(
     cosseno: { ...PARAMETROS_PADRAO.cosseno, ...parciais.cosseno },
     colaborativa: { ...PARAMETROS_PADRAO.colaborativa, ...parciais.colaborativa },
     orcamento: { ...PARAMETROS_PADRAO.orcamento, ...parciais.orcamento },
+    orquestracao: { ...PARAMETROS_PADRAO.orquestracao, ...parciais.orquestracao },
   };
   validarParametros(parametros);
   return parametros;
@@ -78,14 +92,24 @@ export function resolverParametros(
 
 function validarParametros(parametros: ParametrosRecomendacao): void {
   const problemas: string[] = [];
-  if (!Number.isInteger(parametros.topN) || parametros.topN < 1 || parametros.topN > 100) {
-    problemas.push('topN deve ser inteiro entre 1 e 100');
+  const inteirosEntre: [string, number, number, number][] = [
+    ['topN', parametros.topN, 1, 100],
+    ['orquestracao.numeroSugestoes', parametros.orquestracao.numeroSugestoes, 1, 10],
+  ];
+  for (const [nome, valor, minimo, maximo] of inteirosEntre) {
+    if (!Number.isInteger(valor) || valor < minimo || valor > maximo) {
+      problemas.push(`${nome} deve ser inteiro entre ${minimo} e ${maximo}`);
+    }
+  }
+  if (parametros.orquestracao.scoreMinimo > 1) {
+    problemas.push('orquestracao.scoreMinimo deve ser <= 1');
   }
   const numeros: [string, number][] = [
     ['folgaTetoPapel', parametros.folgaTetoPapel],
     ...prefixar('cosseno', parametros.cosseno),
     ...prefixar('colaborativa', parametros.colaborativa),
     ...prefixar('orcamento', parametros.orcamento),
+    ...prefixar('orquestracao', parametros.orquestracao),
   ];
   for (const [nome, valor] of numeros) {
     if (!Number.isFinite(valor) || valor < 0) {
