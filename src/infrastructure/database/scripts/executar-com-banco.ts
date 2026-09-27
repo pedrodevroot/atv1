@@ -1,12 +1,14 @@
 import type { DataSource } from 'typeorm';
 import { carregarArquivoEnv, carregarConfig } from '../../../config/config.js';
-import { criarDataSource } from '../data-source.js';
+import { criarDataSource, garantirSchema } from '../data-source.js';
 
 export async function executarComBanco(tarefa: (dataSource: DataSource) => Promise<void>) {
   carregarArquivoEnv();
-  const dataSource = criarDataSource(carregarConfig().banco);
+  const { banco } = carregarConfig();
+  const dataSource = criarDataSource(banco);
   try {
     await dataSource.initialize();
+    await garantirSchema(dataSource, banco.schema);
     await tarefa(dataSource);
   } catch (erro) {
     console.error(erro);

@@ -16,6 +16,7 @@ const EsquemaAmbiente = Type.Object({
   DB_USER: Type.String({ minLength: 1 }),
   DB_PASSWORD: Type.String({ minLength: 1 }),
   DB_NAME: Type.String({ minLength: 1 }),
+  DB_SCHEMA: Type.String({ pattern: '^[a-z_][a-z0-9_]{0,62}$', default: 'public' }),
   DB_POOL_MAX: Type.Integer({ minimum: 1, maximum: 200, default: 20 }),
   DB_TIMEOUT_MS: Type.Integer({ minimum: 100, maximum: 60000, default: 2000 }),
 });
@@ -30,6 +31,7 @@ export interface ConfigBanco {
   usuario: string;
   senha: string;
   nome: string;
+  schema: string;
   poolMaximo: number;
   timeoutMs: number;
 }
@@ -86,6 +88,7 @@ function mapearConfig(ambiente: Ambiente): Config {
       usuario: ambiente.DB_USER,
       senha: ambiente.DB_PASSWORD,
       nome: ambiente.DB_NAME,
+      schema: ambiente.DB_SCHEMA,
       poolMaximo: ambiente.DB_POOL_MAX,
       timeoutMs: ambiente.DB_TIMEOUT_MS,
     },
