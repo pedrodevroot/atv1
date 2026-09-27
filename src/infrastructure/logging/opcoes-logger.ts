@@ -1,12 +1,9 @@
-import type { FastifyServerOptions } from 'fastify';
+import { pino, type Logger, type LoggerOptions } from 'pino';
 import type { Config } from '../../config/config.js';
 
-export function criarOpcoesLogger(config: Config): FastifyServerOptions['logger'] {
-  if (config.ambiente === 'test') {
-    return false;
-  }
-  const base = {
-    level: config.log.nivel,
+export function criarOpcoesLogger(config: Config): LoggerOptions {
+  const base: LoggerOptions = {
+    level: config.ambiente === 'test' ? 'silent' : config.log.nivel,
     base: { servico: 'cinebridge-recomendacao' },
     redact: ['req.headers.authorization'],
   };
@@ -17,4 +14,8 @@ export function criarOpcoesLogger(config: Config): FastifyServerOptions['logger'
     };
   }
   return base;
+}
+
+export function criarLogger(config: Config): Logger {
+  return pino(criarOpcoesLogger(config));
 }

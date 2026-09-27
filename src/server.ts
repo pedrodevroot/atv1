@@ -1,12 +1,13 @@
 import { construirApp } from './app.js';
 import { carregarArquivoEnv, carregarConfig } from './config/config.js';
 import { criarContainer } from './container.js';
-import { criarOpcoesLogger } from './infrastructure/logging/opcoes-logger.js';
+import { criarLogger } from './infrastructure/logging/opcoes-logger.js';
 
 carregarArquivoEnv();
 const config = carregarConfig();
-const container = criarContainer(config);
-const app = await construirApp(container, { logger: criarOpcoesLogger(config) });
+const logger = criarLogger(config);
+const container = criarContainer(config, logger);
+const app = await construirApp(container, { logger });
 
 app.addHook('onClose', async () => {
   await container.encerrar();
