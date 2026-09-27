@@ -7,6 +7,12 @@ import { AuditoriaRecomendacao } from './application/observers/auditoria-recomen
 import { NotificadorEmail } from './application/observers/notificador-email.js';
 import { NotificadorInterno } from './application/observers/notificador-interno.js';
 import { PublicadorIntegracao } from './application/observers/publicador-integracao.js';
+import type {
+  CaixaMensagens,
+  PublicadorExterno,
+  RegistroAuditoria,
+  ServicoEmail,
+} from './application/ports/canais-saida.js';
 import type { Logger } from './application/ports/logger.js';
 import type { Observador, Sujeito } from './application/ports/observador.js';
 import { FiltragemColaborativa } from './application/strategies/filtragem-colaborativa.js';
@@ -30,13 +36,33 @@ import {
   RegistroAuditoriaLog,
   ServicoEmailSimulado,
 } from './infrastructure/notifications/canais-simulados.js';
-import { RepositorioProfissionaisMemoria } from './infrastructure/repositories/repositorio-profissionais-memoria.js';
-import { RepositorioProjetosMemoria } from './infrastructure/repositories/repositorio-projetos-memoria.js';
+import { RepositorioProfissionaisTypeorm } from './infrastructure/repositories/repositorio-profissionais-typeorm.js';
+import { RepositorioProjetosTypeorm } from './infrastructure/repositories/repositorio-projetos-typeorm.js';
+import {
+  CaixaMensagensTypeorm,
+  RegistroAuditoriaTypeorm,
+  RepositorioConvitesTypeorm,
+  RepositorioRecomendacoesTypeorm,
+} from './infrastructure/repositories/repositorios-typeorm.js';
 
 export interface CanaisSaida {
+  readonly email: ServicoEmail;
+  readonly caixa: CaixaMensagens;
+  readonly auditoria: RegistroAuditoria;
+  readonly publicador: PublicadorExterno;
+}
+
+export interface CanaisSaidaMemoria extends CanaisSaida {
   readonly email: ServicoEmailSimulado;
   readonly caixa: CaixaMensagensMemoria;
   readonly auditoria: RegistroAuditoriaLog;
+  readonly publicador: PublicadorExternoMemoria;
+}
+
+export interface CanaisSaidaContainer extends CanaisSaida {
+  readonly email: ServicoEmailSimulado;
+  readonly caixa: CaixaMensagensTypeorm;
+  readonly auditoria: RegistroAuditoriaTypeorm;
   readonly publicador: PublicadorExternoMemoria;
 }
 
@@ -46,12 +72,14 @@ export interface Container extends DependenciasApi {
   readonly dataSource: DataSource;
   readonly parametros: ParametrosRecomendacao;
   readonly registroEstrategias: RegistroEstrategias;
-  readonly repositorioProfissionais: RepositorioProfissionaisMemoria;
-  readonly repositorioProjetos: RepositorioProjetosMemoria;
+  readonly repositorioProfissionais: RepositorioProfissionaisTypeorm;
+  readonly repositorioProjetos: RepositorioProjetosTypeorm;
+  readonly repositorioConvites: RepositorioConvitesTypeorm;
+  readonly repositorioRecomendacoes: RepositorioRecomendacoesTypeorm;
   readonly orquestradorPadrao: OrquestradorPadrao;
   readonly orquestradorSubstituicao: OrquestradorSubstituicao;
   readonly barramento: BarramentoEventosEmMemoria;
-  readonly canais: CanaisSaida;
+  readonly canais: CanaisSaidaContainer;
   encerrar(): Promise<void>;
 }
 
@@ -63,7 +91,7 @@ export function criarRegistroEstrategias(): RegistroEstrategias {
   ]);
 }
 
-export function criarCanaisSaida(logger?: Logger): CanaisSaida {
+export function criarCanaisSaida(logger?: Logger): CanaisSaidaMemoria {
   return {
     email: new ServicoEmailSimulado(logger),
     caixa: new CaixaMensagensMemoria(),
@@ -98,8 +126,10 @@ export function criarContainer(config: Config, logger: Pino = criarLogger(config
   const consultarSaude = new ConsultarSaude([new VerificadorBanco(dataSource)]);
   const parametros = resolverParametros();
   const registroEstrategias = criarRegistroEstrategias();
-  const repositorioProfissionais = new RepositorioProfissionaisMemoria();
-  const repositorioProjetos = new RepositorioProjetosMemoria();
+  const repositorioProfissionais = new RepositorioProfissionaisTypeorm(dataSource);
+  const repositorioProjetos = new RepositorioProjetosTypeorm(dataSource, repositorioProfissionais);
+  const repositorioConvites = new RepositorioConvitesTypeorm(dataSource);
+  const repositorioRecomendacoes = new RepositorioRecomendacoesTypeorm(dataSource);
   const orquestradorPadrao = new OrquestradorPadrao(repositorioProfissionais);
   const orquestradorSubstituicao = new OrquestradorSubstituicao(repositorioProfissionais);
   const barramento = new BarramentoEventosEmMemoria((falha) => {
@@ -113,7 +143,12 @@ export function criarContainer(config: Config, logger: Pino = criarLogger(config
       'Observador falhou ao processar evento',
     );
   });
-  const canais = criarCanaisSaida(logger);
+  const canais: CanaisSaidaContainer = {
+    email: new ServicoEmailSimulado(logger),
+    caixa: new CaixaMensagensTypeorm(dataSource),
+    auditoria: new RegistroAuditoriaTypeorm(dataSource, logger),
+    publicador: new PublicadorExternoMemoria(logger),
+  };
   const atualizador = new AtualizadorComposicao({
     projetos: repositorioProjetos,
     substituicao: orquestradorSubstituicao,
@@ -132,6 +167,8 @@ export function criarContainer(config: Config, logger: Pino = criarLogger(config
     registroEstrategias,
     repositorioProfissionais,
     repositorioProjetos,
+    repositorioConvites,
+    repositorioRecomendacoes,
     orquestradorPadrao,
     orquestradorSubstituicao,
     barramento,

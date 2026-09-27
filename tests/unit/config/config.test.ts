@@ -24,6 +24,7 @@ describe('carregarConfig', () => {
         usuario: 'usuario',
         senha: 'senha',
         nome: 'banco',
+        schema: 'public',
         poolMaximo: 20,
         timeoutMs: 2000,
       },

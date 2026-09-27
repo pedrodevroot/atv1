@@ -61,12 +61,12 @@ describe('criarContainer', () => {
     ]);
   });
 
-  it('registra no log a falha de um observador e aguarda as entregas ao encerrar', async () => {
+  it('sem banco, registra no log os observadores que falharam e os demais seguem entregando', async () => {
     const container = criarContainer(config);
-    const erros: string[] = [];
-    container.logger.error = ((_dados: object, mensagem: string) => {
-      erros.push(mensagem);
-    }) as typeof container.logger.error;
+    const falharam: string[] = [];
+    container.logger.error = (dados: { observador: string }) => {
+      falharam.push(dados.observador);
+    };
     container.barramento.adicionarObservador({
       nome: 'falho',
       interesses: '*',
@@ -76,7 +76,7 @@ describe('criarContainer', () => {
     container.barramento.notificarObservadores(eventoRecomendacao());
     await container.encerrar();
 
-    expect(erros).toEqual(['Observador falhou ao processar evento']);
+    expect(falharam.sort()).toEqual(['auditoria-recomendacao', 'falho', 'notificador-interno']);
     expect(container.canais.email.enviados.total).toBe(2);
   });
 });
