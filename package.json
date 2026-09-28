@@ -28,6 +28,7 @@
     "docker:logs": "docker compose logs -f recomendacao",
     "docker:reset": "docker compose down -v",
     "migration:run": "tsx src/infrastructure/database/scripts/migrar.ts",
+    "db:preparar": "tsx src/infrastructure/database/scripts/preparar.ts",
     "migration:revert": "tsx src/infrastructure/database/scripts/reverter-migracao.ts",
     "seed": "tsx src/infrastructure/database/scripts/semear.ts",
     "perf": "tsx tests/perf/carga.ts",
@@ -51,6 +52,7 @@
   },
   "homepage": "https://github.com/pedrodevroot/atv1#readme",
   "dependencies": {
+    "@faker-js/faker": "^10.6.0",
     "@fastify/swagger": "^9.9.0",
     "@fastify/swagger-ui": "^6.1.1",
     "@fastify/type-provider-typebox": "^6.1.0",
@@ -62,7 +64,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@faker-js/faker": "^10.6.0",
     "@types/autocannon": "^7.12.7",
     "@types/node": "^22.19.0",
     "@types/pg": "^8.23.1",
