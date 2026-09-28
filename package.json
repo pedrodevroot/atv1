@@ -13,7 +13,7 @@
     "start": "node dist/server.js",
     "start:cluster": "node dist/cluster.js",
     "typecheck": "tsc -p tsconfig.json",
-    "lint": "eslint . && prettier --check .",
+    "lint": "eslint . --max-warnings=0 && prettier --check .",
     "format": "prettier --write .",
     "test": "vitest run",
     "test:unit": "vitest run --project unit",
@@ -31,7 +31,8 @@
     "migration:revert": "tsx src/infrastructure/database/scripts/reverter-migracao.ts",
     "seed": "tsx src/infrastructure/database/scripts/semear.ts",
     "perf": "tsx tests/perf/carga.ts",
-    "precisao": "tsx tests/perf/precisao.ts"
+    "precisao": "tsx tests/perf/precisao.ts",
+    "demo": "tsx tests/demo/demonstracao.ts"
   },
   "repository": {
     "type": "git",

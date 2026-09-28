@@ -33,6 +33,7 @@ export default defineConfig(
     plugins: { cinebridge: { rules: { 'sem-comentarios': semComentarios } } },
     rules: {
       'cinebridge/sem-comentarios': 'error',
+      '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/require-await': 'off',

@@ -64,7 +64,12 @@ jobs:
       - run: npm ci
       - run: npm run migration:run
       - run: npm run seed
-      - run: npm run coverage
+      - name: Testes com cobertura mínima de 80% (reprova o PR abaixo disso)
+        run: npm run coverage
+      - name: Resumo da cobertura
+        if: always()
+        run: |
+          node -e "const r=require('./coverage/coverage-summary.json').total;const l=['| Métrica | % |','| --- | --- |',...['lines','statements','functions','branches'].map(k=>'| '+k+' | '+r[k].pct+' |')];console.log('## Cobertura\n\n'+l.join('\n'))" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
