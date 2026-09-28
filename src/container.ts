@@ -28,6 +28,7 @@ import { criarCasosDeUso } from './application/use-cases/casos-de-uso.js';
 import { ConsultarSaude } from './application/use-cases/consultar-saude.js';
 import type { DependenciasApi } from './app.js';
 import type { Config } from './config/config.js';
+import { ConexaoBanco } from './infrastructure/database/conexao-banco.js';
 import { criarDataSource } from './infrastructure/database/data-source.js';
 import { VerificadorBanco } from './infrastructure/database/verificador-banco.js';
 import { criarLogger } from './infrastructure/logging/opcoes-logger.js';
@@ -74,6 +75,7 @@ export interface Container extends DependenciasApi {
   readonly config: Config;
   readonly logger: Pino;
   readonly dataSource: DataSource;
+  readonly conexao: ConexaoBanco;
   readonly parametros: ParametrosRecomendacao;
   readonly registroEstrategias: RegistroEstrategias;
   readonly repositorioProfissionais: RepositorioProfissionaisTypeorm;
@@ -137,6 +139,7 @@ export function criarContainer(
 ): Container {
   const relogio = opcoes.relogio ?? relogioDoSistema;
   const dataSource = criarDataSource(config.banco);
+  const conexao = new ConexaoBanco(dataSource);
   const parametros = resolverParametros();
   const registroEstrategias = criarRegistroEstrategias();
   const repositorioProfissionais = new RepositorioProfissionaisTypeorm(dataSource);
@@ -152,7 +155,7 @@ export function criarContainer(
     logger,
   );
   const consultarSaude = new ConsultarSaude([
-    new VerificadorBanco(dataSource),
+    new VerificadorBanco(dataSource, undefined, conexao),
     cadastroProfissionais,
   ]);
   const repositorioProjetos = new RepositorioProjetosTypeorm(dataSource, repositorioProfissionais);
@@ -206,6 +209,7 @@ export function criarContainer(
     config,
     logger,
     dataSource,
+    conexao,
     consultarSaude,
     parametros,
     registroEstrategias,
@@ -219,6 +223,7 @@ export function criarContainer(
     barramento,
     canais,
     async encerrar() {
+      conexao.parar();
       await barramento.aguardarEntregas();
       if (dataSource.isInitialized) {
         await dataSource.destroy();

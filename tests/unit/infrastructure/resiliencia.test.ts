@@ -195,6 +195,21 @@ describe('RepositorioProfissionaisResiliente', () => {
     expect(await repositorio.verificar()).toBe(false);
   });
 
+  it('a verificação de saúde recarrega o cache sozinha quando a fonte volta', async () => {
+    const { relogio } = relogioControlado();
+    const { fonte, derrubar, restaurar } = fonteControlada();
+    derrubar();
+    const { repositorio } = criarResiliente(fonte, relogio);
+    await repositorio.aquecer();
+    restaurar();
+
+    expect(await repositorio.verificar()).toBe(false);
+    await vi.waitFor(async () => {
+      expect(await repositorio.verificar()).toBe(true);
+    });
+    expect(repositorio.estado.profissionaisEmCache).toBe(4);
+  });
+
   it('o disjuntor aberto impede novas tentativas contra a fonte', async () => {
     const { relogio } = relogioControlado();
     const { fonte, derrubar } = fonteControlada();

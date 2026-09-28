@@ -18,9 +18,21 @@ describe('API HTTP', () => {
         code: 'ECONNREFUSED',
       });
     });
+    app.get('/teste/host-inexistente', async () => {
+      throw Object.assign(new Error('getaddrinfo ENOTFOUND postgres'), { code: 'ENOTFOUND' });
+    });
     app.post(
       '/teste/validacao',
       { schema: { body: Type.Object({ nome: Type.String({ minLength: 3 }) }) } },
+      async () => ({ ok: true }),
+    );
+    app.post(
+      '/teste/estrito',
+      {
+        schema: {
+          body: Type.Object({ valor: Type.Number() }, { additionalProperties: false }),
+        },
+      },
       async () => ({ ok: true }),
     );
     app.get('/teste/falha', async () => {
@@ -83,6 +95,27 @@ describe('API HTTP', () => {
     });
   });
 
+  it('recusa campos fora do contrato em vez de descartá-los em silêncio', async () => {
+    const resposta = await app.inject({
+      method: 'POST',
+      url: '/teste/estrito',
+      payload: { valor: 1, estrategiaa: 'cosseno' },
+    });
+
+    expect(resposta.statusCode).toBe(400);
+    expect(resposta.json()).toMatchObject({ codigo: 'REQUISICAO_INVALIDA' });
+  });
+
+  it('não converte texto em número no corpo', async () => {
+    const resposta = await app.inject({
+      method: 'POST',
+      url: '/teste/estrito',
+      payload: { valor: '280000' },
+    });
+
+    expect(resposta.statusCode).toBe(400);
+  });
+
   it('oculta detalhes de erros inesperados', async () => {
     const resposta = await app.inject({ method: 'GET', url: '/teste/falha' });
 
@@ -98,6 +131,13 @@ describe('API HTTP', () => {
 
     expect(resposta.statusCode).toBe(503);
     expect(resposta.headers['retry-after']).toBe('5');
+    expect(resposta.json()).toMatchObject({ codigo: 'SERVICO_INDISPONIVEL' });
+  });
+
+  it('responde 503 quando o host do banco não é encontrado (container parado)', async () => {
+    const resposta = await app.inject({ method: 'GET', url: '/teste/host-inexistente' });
+
+    expect(resposta.statusCode).toBe(503);
     expect(resposta.json()).toMatchObject({ codigo: 'SERVICO_INDISPONIVEL' });
   });
 

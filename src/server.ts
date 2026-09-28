@@ -1,3 +1,4 @@
+import cluster from 'node:cluster';
 import { construirApp } from './app.js';
 import { carregarArquivoEnv, carregarConfig } from './config/config.js';
 import { criarContainer } from './container.js';
@@ -13,14 +14,30 @@ app.addHook('onClose', async () => {
   await container.encerrar();
 });
 
+const aquecerCadastro = () => container.cadastroProfissionais.aquecer();
+
 try {
-  await container.dataSource.initialize();
-  await container.cadastroProfissionais.aquecer();
+  await container.conexao.garantir();
+  if (!(await aquecerCadastro())) {
+    container.conexao.reconectarEmSegundoPlano({ aoConectar: aquecerCadastro });
+  }
 } catch (erro) {
   app.log.warn({ err: erro }, 'Banco indisponível na inicialização; serviço em modo degradado');
+  container.conexao.reconectarEmSegundoPlano({
+    aoConectar: async () => {
+      const aquecido = await aquecerCadastro();
+      if (aquecido) {
+        app.log.info('Conexão com o banco restabelecida');
+      }
+      return aquecido;
+    },
+  });
 }
 
 await app.listen({ host: config.servidor.host, port: config.servidor.porta });
+
+const tomada = cluster.worker?.id ?? 1;
+app.log.info({ cena: 1, tomada }, `🎬 Cena 1, tomada ${tomada}: CineBridge no ar!`);
 
 for (const sinal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(sinal, () => {

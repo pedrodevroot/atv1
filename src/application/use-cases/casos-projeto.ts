@@ -9,6 +9,7 @@ import {
   eventoRecomendacaoGerada,
   membrosSugeridos,
 } from '../eventos/fabrica-eventos.js';
+import { comNovasTentativas } from '../erros/erro-aplicacao.js';
 import type { ResultadoOrquestracao } from '../orchestration/orquestrador-equipe.js';
 import {
   resolverParametros,
@@ -125,13 +126,15 @@ export class RecomendarNovamente {
     private readonly gerarRodada: GerarRodadaRecomendacao,
   ) {}
 
-  async executar(
+  executar(
     projetoId: string,
     opcoes: OpcoesRodada,
     contexto: ContextoRequisicao,
   ): Promise<ResultadoRodada> {
-    const projeto = await obterProjeto(this.deps.projetos, projetoId);
-    return this.gerarRodada.executar(projeto, opcoes, contexto);
+    return comNovasTentativas(async () => {
+      const projeto = await obterProjeto(this.deps.projetos, projetoId);
+      return this.gerarRodada.executar(projeto, opcoes, contexto);
+    });
   }
 }
 
@@ -153,7 +156,15 @@ export class ReavaliarProjeto {
     private readonly gerarRodada: GerarRodadaRecomendacao,
   ) {}
 
-  async executar(
+  executar(
+    projetoId: string,
+    dados: DadosReavaliacao,
+    contexto: ContextoRequisicao,
+  ): Promise<ResultadoReavaliacaoProjeto> {
+    return comNovasTentativas(() => this.tentar(projetoId, dados, contexto));
+  }
+
+  private async tentar(
     projetoId: string,
     dados: DadosReavaliacao,
     contexto: ContextoRequisicao,
@@ -166,6 +177,12 @@ export class ReavaliarProjeto {
       },
       dados.limiar,
     );
+    const rodada = reavaliacao.significativa
+      ? await this.gerarRodada.executar(projeto, {}, contexto)
+      : undefined;
+    if (!rodada) {
+      await this.deps.projetos.salvar(projeto);
+    }
     this.deps.sujeito.notificarObservadores(
       criarEvento(
         'REAVALIACAO_SOLICITADA',
@@ -173,11 +190,6 @@ export class ReavaliarProjeto {
         { origem: ORIGEM_SERVICO, ...contexto },
       ),
     );
-    if (!reavaliacao.significativa) {
-      await this.deps.projetos.salvar(projeto);
-      return { projeto, reavaliacao };
-    }
-    const rodada = await this.gerarRodada.executar(projeto, {}, contexto);
-    return { projeto, reavaliacao, rodada };
+    return rodada ? { projeto, reavaliacao, rodada } : { projeto, reavaliacao };
   }
 }

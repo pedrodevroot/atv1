@@ -3,7 +3,7 @@ import type { Equipe } from '../../domain/entidades/equipe.js';
 import type { Projeto } from '../../domain/entidades/projeto.js';
 import type { Papel } from '../../domain/enums/papel.js';
 import { criarEvento, type EventoRecomendacao } from '../../domain/eventos/evento-recomendacao.js';
-import { naoEncontrado } from '../erros/erro-aplicacao.js';
+import { comNovasTentativas, naoEncontrado } from '../erros/erro-aplicacao.js';
 import { ORIGEM_SERVICO, eventoRecomendacaoGerada } from '../eventos/fabrica-eventos.js';
 import type { ResultadoOrquestracao } from '../orchestration/orquestrador-equipe.js';
 import {
@@ -41,7 +41,14 @@ abstract class CasoDeEquipe {
 }
 
 export class AceitarMembro extends CasoDeEquipe {
-  async executar(
+  executar(
+    alvo: AlvoMembro,
+    contexto: ContextoRequisicao,
+  ): Promise<{ projeto: Projeto; convite: Convite }> {
+    return comNovasTentativas(() => this.tentar(alvo, contexto));
+  }
+
+  private async tentar(
     alvo: AlvoMembro,
     contexto: ContextoRequisicao,
   ): Promise<{ projeto: Projeto; convite: Convite }> {
@@ -77,11 +84,15 @@ export class AceitarMembro extends CasoDeEquipe {
 }
 
 export class RejeitarMembro extends CasoDeEquipe {
-  async executar(alvo: AlvoMembro, contexto: ContextoRequisicao): Promise<Projeto> {
+  executar(alvo: AlvoMembro, contexto: ContextoRequisicao): Promise<Projeto> {
+    return comNovasTentativas(() => this.tentar(alvo, contexto));
+  }
+
+  private async tentar(alvo: AlvoMembro, contexto: ContextoRequisicao): Promise<Projeto> {
     const projeto = await obterProjeto(this.deps.projetos, alvo.projetoId);
     const rejeitado = projeto.rejeitarRecomendacao(alvo.equipeId, alvo.papel);
-    await this.cancelarConvitePendente(alvo.equipeId, alvo.papel);
     await this.deps.projetos.salvar(projeto);
+    await this.cancelarConvitePendente(alvo.equipeId, alvo.papel);
     this.publicar([
       criarEvento(
         'MEMBRO_REJEITADO',
@@ -100,7 +111,15 @@ export class RejeitarMembro extends CasoDeEquipe {
 }
 
 export class SubstituirMembro extends CasoDeEquipe {
-  async executar(
+  executar(
+    alvo: AlvoMembro,
+    opcoes: { estrategia?: string },
+    contexto: ContextoRequisicao,
+  ): Promise<{ projeto: Projeto; resultado: ResultadoOrquestracao }> {
+    return comNovasTentativas(() => this.tentar(alvo, opcoes, contexto));
+  }
+
+  private async tentar(
     alvo: AlvoMembro,
     opcoes: { estrategia?: string },
     contexto: ContextoRequisicao,
@@ -118,8 +137,8 @@ export class SubstituirMembro extends CasoDeEquipe {
       equipeId: alvo.equipeId,
       papel: alvo.papel,
     });
-    await this.cancelarConvitePendente(alvo.equipeId, alvo.papel);
     await projetos.salvar(projeto);
+    await this.cancelarConvitePendente(alvo.equipeId, alvo.papel);
     await recomendacoes.salvarTodas(resultado.recomendacoes);
 
     const novo = projeto.equipe(alvo.equipeId).membro(alvo.papel);
@@ -190,7 +209,15 @@ export class ResponderConvite extends CasoDeEquipe {
 }
 
 export class FinalizarEquipe extends CasoDeEquipe {
-  async executar(
+  executar(
+    projetoId: string,
+    equipeId: string,
+    contexto: ContextoRequisicao,
+  ): Promise<{ projeto: Projeto; equipe: Equipe }> {
+    return comNovasTentativas(() => this.tentar(projetoId, equipeId, contexto));
+  }
+
+  private async tentar(
     projetoId: string,
     equipeId: string,
     contexto: ContextoRequisicao,

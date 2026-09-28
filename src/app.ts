@@ -25,6 +25,7 @@ export async function construirApp(dependencias: DependenciasApi, opcoes: Opcoes
     ...(opcoes.logger ? { loggerInstance: opcoes.logger } : { logger: false }),
     requestIdHeader: 'x-request-id',
     genReqId: () => randomUUID(),
+    ajv: { customOptions: { removeAdditional: false, coerceTypes: false } },
   }).withTypeProvider<TypeBoxTypeProvider>();
 
   app.addHook('onSend', async (requisicao, resposta) => {

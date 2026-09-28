@@ -78,6 +78,9 @@ export class RepositorioProfissionaisResiliente
   }
 
   verificar(): Promise<boolean> {
+    if (this.snapshot === undefined) {
+      this.recarregarEmSegundoPlano();
+    }
     return Promise.resolve(this.snapshot !== undefined && this.disjuntor.estado !== 'ABERTO');
   }
 

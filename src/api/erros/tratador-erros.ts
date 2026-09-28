@@ -16,14 +16,23 @@ const STATUS_APLICACAO: Record<CodigoErroAplicacao, number> = {
   RESTRICAO_VIOLADA: 422,
   NAO_ENCONTRADO: 404,
   FLUXO_INVARIAVEL: 500,
+  CONFLITO_CONCORRENCIA: 409,
 };
+
+const CODIGOS_INDISPONIBILIDADE = new Set([
+  'ECONNREFUSED',
+  'ECONNRESET',
+  'ETIMEDOUT',
+  'ENOTFOUND',
+  'EAI_AGAIN',
+  'EHOSTUNREACH',
+]);
 
 function ehIndisponibilidade(erro: Error): boolean {
   const codigo = (erro as { code?: unknown }).code;
   return (
-    codigo === 'ECONNREFUSED' ||
-    codigo === 'ETIMEDOUT' ||
-    /not connected|connection terminated|timeout exceeded when trying to connect/i.test(
+    (typeof codigo === 'string' && CODIGOS_INDISPONIBILIDADE.has(codigo)) ||
+    /not connected|connection terminated|timeout exceeded when trying to connect|getaddrinfo/i.test(
       erro.message,
     )
   );
