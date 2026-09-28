@@ -26,15 +26,29 @@ mesmo PostgreSQL, cada um com seu próprio banco.
 
 ## O que precisa estar instalado na máquina
 
-**Apenas o Docker Desktop** (ou Docker + Docker Compose no Linux).
+| Programa                                          | Para quê                               | Download                                       |
+| ------------------------------------------------- | -------------------------------------- | ---------------------------------------------- |
+| **Git**                                           | clonar o repositório                   | https://git-scm.com/downloads                  |
+| **Docker Desktop** (ou Docker + Compose no Linux) | executar a API e o PostgreSQL          | https://www.docker.com/products/docker-desktop |
+| **Node.js 22.12+** (LTS, versão no `.nvmrc`)      | testes, demonstração e desenvolvimento | https://nodejs.org                             |
 
-Node.js **não** é necessário para executar: o `Dockerfile` instala as dependências,
-compila o TypeScript e gera a imagem final só com o código compilado e as
-dependências de produção.
+Para **só executar a API** bastam Git e Docker: o `Dockerfile` instala as
+dependências, compila o TypeScript e gera a imagem final só com o código compilado
+e as dependências de produção.
 
 As portas `3000` (API) e `5434` (PostgreSQL) precisam estar livres.
 
-Para rodar os testes ou desenvolver é preciso o **Node.js 22.12+** (`.nvmrc`).
+| Para                                              | Precisa                                         |
+| ------------------------------------------------- | ----------------------------------------------- |
+| Executar a API (`docker compose up`)              | Git e Docker                                    |
+| Rodar a demonstração dos padrões (`npm run demo`) | **Node.js 22.12+**                              |
+| Rodar os testes, a cobertura e o teste de carga   | **Node.js 22.12+** e Docker (para o PostgreSQL) |
+| Desenvolver (`npm run dev`)                       | **Node.js 22.12+** e Docker (para o PostgreSQL) |
+
+Para conferir: `git --version`, `docker --version` e `node -v`.
+
+Com o Node instalado, rode `npm ci` uma vez na pasta do projeto antes de qualquer
+comando `npm run`.
 
 ---
 
@@ -96,11 +110,14 @@ npm run dev                # http://localhost:3000, recarrega ao salvar
 
 ## Os quatro padrões de projeto
 
+Precisa do **Node.js 22.12+**; não precisa de Docker nem de banco.
+
 ```bash
+npm ci
 npm run demo
 ```
 
-Imprime as quatro demonstrações pedidas na atividade, sem precisar de banco.
+Imprime as quatro demonstrações pedidas na atividade.
 
 | Padrão              | Onde está                                                | O que a demonstração prova                                                                                                                                           | Teste                                  |
 | ------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
@@ -109,6 +126,11 @@ Imprime as quatro demonstrações pedidas na atividade, sem precisar de banco.
 | **Observer**        | `src/application/observers` + `infrastructure/messaging` | Um observador falha e e-mail, mensagem interna, auditoria e integração continuam; entrega assíncrona; observador lento não atrasa os demais                          | `demonstracao-observer.test.ts`        |
 | **Visitor**         | `src/application/visitors`                               | Validação, compatibilidade e relatório sobre a mesma árvore; a árvore não muda; um visitante novo não exige alterar o domínio                                        | `demonstracao-visitor.test.ts`         |
 
+A classe `SistemaRecomendacao` (`src/application/sistema-recomendacao.ts`) reproduz a API do
+diagrama da atividade — `definirEstrategia`, `executarRecomendacao`, `adicionarObservador` e
+`notificarObservadores` —, unindo Strategy e Observer (teste `sistema-recomendacao.test.ts`).
+A interface `RecomendacaoStrategy` do diagrama corresponde a `EstrategiaRecomendacao`.
+
 ---
 
 ## Como executar os testes
@@ -116,12 +138,14 @@ Imprime as quatro demonstrações pedidas na atividade, sem precisar de banco.
 ```bash
 npm ci
 npm run db:up        # os testes de integração usam o PostgreSQL do Docker
-npm test             # todos
-npm run test:unit    # só os unitários, sem banco
-npm run coverage     # todos, reprovando abaixo de 80% de cobertura
+npm test                  # todos
+npm run test:unit         # só os unitários, sem banco
+npm run test:int          # só os de integração com o PostgreSQL
+npm run test:desempenho   # só os de desempenho com 10 mil profissionais
+npm run coverage          # todos, reprovando abaixo de 80% de cobertura
 ```
 
-São **277 testes automatizados**, em cerca de 15 segundos. Os de integração rodam
+São **294 testes automatizados**, em cerca de 15 segundos. Os de integração rodam
 num schema separado (`teste_integracao`) e não apagam os dados de
 desenvolvimento.
 
@@ -132,13 +156,13 @@ desenvolvimento.
 | Template Method                                                  | 25     | Vitest                  |
 | Observer                                                         | 20     | Vitest                  |
 | Visitor                                                          | 19     | Vitest                  |
-| Aplicação (saúde, precisão)                                      | 7      | Vitest                  |
-| Infraestrutura (config, cache resiliente, disjuntor, barramento) | 30     | Vitest                  |
-| API HTTP com repositórios em memória                             | 24     | Vitest + `app.inject()` |
-| Integração com PostgreSQL (repositórios, API ponta a ponta)      | 15     | Vitest + PostgreSQL 18  |
+| Aplicação (SistemaRecomendacao, saúde, precisão, concorrência)   | 12     | Vitest                  |
+| Infraestrutura (config, cache resiliente, disjuntor, barramento) | 37     | Vitest                  |
+| API HTTP com repositórios em memória                             | 27     | Vitest + `app.inject()` |
+| Integração com PostgreSQL (repositórios, API ponta a ponta)      | 17     | Vitest + PostgreSQL 18  |
 | Desempenho com 10 mil profissionais                              | 3      | Vitest                  |
 
-Cobertura: **99,2% das linhas** (mínimo exigido: 80%). O CI roda lint, tipos,
+Cobertura: **98,9% das linhas** (mínimo exigido: 80%). O CI roda lint, tipos,
 build e testes no **Ubuntu 24.04 e no Windows**, com Node 22 e 24, além da
 integração com PostgreSQL e da subida da stack Docker.
 
@@ -162,34 +186,34 @@ Em todo `POST` o corpo é JSON (`Content-Type: application/json`). O header
 
 ### Projetos e recomendações
 
-| Método | URL                                   | Corpo | Esperado |
-| ------ | ------------------------------------- | ----- | -------- |
-| `GET`  | `/estrategias`                        | —     | 200      |
-| `POST` | `/projetos`                           | **A** | 201      |
-| `GET`  | `/projetos/{projetoId}`               | —     | 200      |
-| `POST` | `/projetos/{projetoId}/recomendacoes` | **B** | 201      |
-| `GET`  | `/projetos/{projetoId}/recomendacoes` | —     | 200      |
-| `POST` | `/projetos/{projetoId}/reavaliacao`   | **C** | 200      |
+| Método | URL                                                        | Corpo | Esperado |
+| ------ | ---------------------------------------------------------- | ----- | -------- |
+| `GET`  | `http://localhost:3000/estrategias`                        | —     | 200      |
+| `POST` | `http://localhost:3000/projetos`                           | **A** | 201      |
+| `GET`  | `http://localhost:3000/projetos/{projetoId}`               | —     | 200      |
+| `POST` | `http://localhost:3000/projetos/{projetoId}/recomendacoes` | **B** | 201      |
+| `GET`  | `http://localhost:3000/projetos/{projetoId}/recomendacoes` | —     | 200      |
+| `POST` | `http://localhost:3000/projetos/{projetoId}/reavaliacao`   | **C** | 200      |
 
 ### Equipe e convites
 
-| Método   | URL                                                                    | Corpo | Esperado                    |
-| -------- | ---------------------------------------------------------------------- | ----- | --------------------------- |
-| `POST`   | `/projetos/{projetoId}/equipes/{equipeId}/membros/DIRETOR/aceite`      | —     | 201, cria o convite         |
-| `POST`   | `/convites/{conviteId}/resposta`                                       | **D** | 200                         |
-| `DELETE` | `/projetos/{projetoId}/equipes/{equipeId}/membros/EDITOR`              | —     | 200, papel fica vago        |
-| `POST`   | `/projetos/{projetoId}/equipes/{equipeId}/membros/EDITOR/substituicao` | **E** | 200                         |
-| `POST`   | `/projetos/{projetoId}/equipes/{equipeId}/finalizacao`                 | —     | 200, após todos confirmarem |
+| Método   | URL                                                                                         | Corpo | Esperado                    |
+| -------- | ------------------------------------------------------------------------------------------- | ----- | --------------------------- |
+| `POST`   | `http://localhost:3000/projetos/{projetoId}/equipes/{equipeId}/membros/DIRETOR/aceite`      | —     | 201, cria o convite         |
+| `POST`   | `http://localhost:3000/convites/{conviteId}/resposta`                                       | **D** | 200                         |
+| `DELETE` | `http://localhost:3000/projetos/{projetoId}/equipes/{equipeId}/membros/EDITOR`              | —     | 200, papel fica vago        |
+| `POST`   | `http://localhost:3000/projetos/{projetoId}/equipes/{equipeId}/membros/EDITOR/substituicao` | **E** | 200                         |
+| `POST`   | `http://localhost:3000/projetos/{projetoId}/equipes/{equipeId}/finalizacao`                 | —     | 200, após todos confirmarem |
 
 ### Relatórios e consultas
 
-| Método | URL                                                  | Corpo | Esperado |
-| ------ | ---------------------------------------------------- | ----- | -------- |
-| `GET`  | `/projetos/{projetoId}/relatorio`                    | —     | 200      |
-| `GET`  | `/projetos/{projetoId}/equipes/{equipeId}/relatorio` | —     | 200      |
-| `GET`  | `/projetos/{projetoId}/auditoria`                    | —     | 200      |
-| `GET`  | `/mensagens/produtor-1`                              | —     | 200      |
-| `GET`  | `/health`                                            | —     | 200      |
+| Método | URL                                                                       | Corpo | Esperado |
+| ------ | ------------------------------------------------------------------------- | ----- | -------- |
+| `GET`  | `http://localhost:3000/projetos/{projetoId}/relatorio`                    | —     | 200      |
+| `GET`  | `http://localhost:3000/projetos/{projetoId}/equipes/{equipeId}/relatorio` | —     | 200      |
+| `GET`  | `http://localhost:3000/projetos/{projetoId}/auditoria`                    | —     | 200      |
+| `GET`  | `http://localhost:3000/mensagens/produtor-1`                              | —     | 200      |
+| `GET`  | `http://localhost:3000/health`                                            | —     | 200      |
 
 Papéis aceitos na URL: `DIRETOR`, `DIRETOR_FOTOGRAFIA`, `SONOPLASTA`, `EDITOR`,
 `ROTEIRISTA`, `EFEITOS_VISUAIS`.
@@ -261,18 +285,19 @@ sem ela, orçamentos até R$ 50 mil usam `regras-orcamento` e os demais
 
 ### Casos de erro
 
-| Método   | URL                                                  | Corpo                                     | Esperado                                   |
-| -------- | ---------------------------------------------------- | ----------------------------------------- | ------------------------------------------ |
-| `GET`    | `/projetos/inexistente`                              | —                                         | 404 `NAO_ENCONTRADO`                       |
-| `POST`   | `/convites/inexistente/resposta`                     | **D**                                     | 404 `NAO_ENCONTRADO`                       |
-| `POST`   | `/projetos`                                          | `{ "titulo": "x" }`                       | 400 `REQUISICAO_INVALIDA`                  |
-| `POST`   | `/projetos`                                          | **A** com `"estrategia": "aleatoria"`     | 400 `ESTRATEGIA_DESCONHECIDA`              |
-| `POST`   | `/projetos`                                          | **A** com `"orcamento": 1500`             | 422 `RESTRICAO_VIOLADA`                    |
-| `POST`   | `/projetos`                                          | **A** com `"dataEntrega"` antes do início | 422 `VALOR_INVALIDO`                       |
-| `POST`   | `/projetos/{id}/equipes/{id}/membros/DIRETOR/aceite` | repetido                                  | 409 `TRANSICAO_INVALIDA`                   |
-| `POST`   | `/convites/{conviteId}/resposta`                     | repetido                                  | 409 `TRANSICAO_INVALIDA`                   |
-| `POST`   | `/projetos/{id}/equipes/{id}/finalizacao`            | com papel sem confirmar                   | 422 `REGRA_VIOLADA`                        |
-| qualquer | com o PostgreSQL fora do ar                          | —                                         | 503 `SERVICO_INDISPONIVEL` + `retry-after` |
+| Método   | URL                                                                                | Corpo                                     | Esperado                                   |
+| -------- | ---------------------------------------------------------------------------------- | ----------------------------------------- | ------------------------------------------ |
+| `GET`    | `http://localhost:3000/projetos/inexistente`                                       | —                                         | 404 `NAO_ENCONTRADO`                       |
+| `POST`   | `http://localhost:3000/convites/inexistente/resposta`                              | **D**                                     | 404 `NAO_ENCONTRADO`                       |
+| `POST`   | `http://localhost:3000/projetos`                                                   | `{ "titulo": "x" }`                       | 400 `REQUISICAO_INVALIDA`                  |
+| `POST`   | `http://localhost:3000/projetos`                                                   | **A** com `"estrategia": "aleatoria"`     | 400 `ESTRATEGIA_DESCONHECIDA`              |
+| `POST`   | `http://localhost:3000/projetos`                                                   | **A** com `"orcamento": 1500`             | 422 `RESTRICAO_VIOLADA`                    |
+| `POST`   | `http://localhost:3000/projetos`                                                   | **A** com `"dataEntrega"` antes do início | 422 `VALOR_INVALIDO`                       |
+| `POST`   | `http://localhost:3000/projetos/{id}/equipes/{id}/membros/DIRETOR/aceite`          | repetido                                  | 409 `TRANSICAO_INVALIDA`                   |
+| `POST`   | `http://localhost:3000/convites/{conviteId}/resposta`                              | repetido                                  | 409 `TRANSICAO_INVALIDA`                   |
+| `POST`   | `http://localhost:3000/projetos/{id}/equipes/{id}/finalizacao`                     | com papel sem confirmar                   | 422 `REGRA_VIOLADA`                        |
+| qualquer | com o PostgreSQL fora do ar                                                        | —                                         | 503 `SERVICO_INDISPONIVEL` + `retry-after` |
+| qualquer | duas alterações simultâneas no mesmo projeto (após 6 novas tentativas automáticas) | —                                         | 409 `CONFLITO_CONCORRENCIA`                |
 
 ### Respostas de erro
 
@@ -387,23 +412,3 @@ sem alterar observadores nem casos de uso.
 
 Metodologia, as otimizações medidas e a precisão de cada estratégia estão em
 [docs/desempenho.md](docs/desempenho.md).
-
----
-
-## Refinamentos do diagrama
-
-O diagrama da atividade era ponto de partida. As correções feitas no código:
-
-| Problema no diagrama                                                                                                     | Correção                                                                                                                |
-| ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| Faltavam as entidades `Recomendacao` e `Convite`, citadas no enunciado                                                   | Criadas, com `StatusConvite` (pendente, aceito, recusado, expirado, cancelado)                                          |
-| `Projeto` sem tipo de captação, localização e peso por papel                                                             | `tipoCaptacao`, `localizacao`, `estrategia` e `RequisitoPapel { papel, peso }`                                          |
-| `Profissional` sem especialidades, faixa de preço, histórico e localização; `VetorCompetencia` e `Intervalo` indefinidos | Atributos e value objects criados                                                                                       |
-| Visitor sem `aceitar()` — sem double dispatch                                                                            | Interface `Visitavel` em Projeto, Equipe, MembroEquipe e Profissional; `VisitanteProjeto<R>` genérico no lugar de `any` |
-| Visitor só visitava projeto e profissional                                                                               | `visitarEquipe` e `visitarMembro`, os níveis reais da árvore                                                            |
-| Strategy devolvia só a lista de profissionais                                                                            | `CandidatoRanqueado { score, custoEstimado, justificativa }` e `ParametrosRecomendacao`                                 |
-| Template Method com uma subclasse e sem a etapa de busca                                                                 | Etapas completas, `OrquestradorSubstituicao` e fluxo protegido contra sobrescrita                                       |
-| Subject embutido em `SistemaRecomendacao` e `EventoRecomendacao` genérico (`dados: Map`)                                 | Porta `Sujeito` implementada com EventEmitter; eventos como união tipada                                                |
-| Faltavam os observadores de fluxo do enunciado                                                                           | `AtualizadorComposicao` (recusa gera nova rodada) e `PublicadorIntegracao`                                              |
-| Projeto → Equipe 1:1, mas o enunciado pede uma ou mais sugestões                                                         | 1 → 0..*, com status da equipe e descarte das sugestões antigas                                                         |
-| Classes dependiam de repositórios concretos                                                                              | Portas (`RepositorioProfissionais`, `RepositorioProjetos`, canais de saída) e adaptadores                               |

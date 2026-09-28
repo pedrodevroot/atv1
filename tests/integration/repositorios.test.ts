@@ -194,6 +194,31 @@ describe('Repositórios TypeORM com PostgreSQL real', () => {
       ).toHaveLength(2);
     });
 
+    it('controle otimista: quem salva por último sobre uma versão velha recebe conflito', async () => {
+      const { projeto } = await projetoComSugestoes();
+      await projetos.salvar(projeto);
+      const primeiraLeitura = await projetos.obter(projeto.id);
+      const segundaLeitura = await projetos.obter(projeto.id);
+      if (!primeiraLeitura || !segundaLeitura) {
+        throw new Error('projeto não reconstruído');
+      }
+      const equipeId = projeto.equipes[0]?.id ?? '';
+
+      primeiraLeitura.aceitarRecomendacao(equipeId, Papel.DIRETOR);
+      await projetos.salvar(primeiraLeitura);
+      segundaLeitura.aceitarRecomendacao(equipeId, Papel.EDITOR);
+
+      await expect(projetos.salvar(segundaLeitura)).rejects.toMatchObject({
+        codigo: 'CONFLITO_CONCORRENCIA',
+      });
+      await expect(projetos.salvar(projeto)).rejects.toMatchObject({
+        codigo: 'CONFLITO_CONCORRENCIA',
+      });
+      const final = await projetos.obter(projeto.id);
+      expect(final?.equipe(equipeId).membro(Papel.DIRETOR)?.status).toBe(StatusMembro.CONVIDADO);
+      expect(final?.equipe(equipeId).membro(Papel.EDITOR)?.status).toBe(StatusMembro.SUGERIDO);
+    });
+
     it('preserva a ordem das sugestões mesmo com o mesmo instante de criação', async () => {
       const projeto = criarProjeto();
       const mesmoInstante = new Date('2026-09-27T12:00:00.000Z');

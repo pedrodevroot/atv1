@@ -6,6 +6,7 @@ import {
   type EventoRecomendacao,
   type TipoEvento,
 } from '../../domain/eventos/evento-recomendacao.js';
+import { comNovasTentativas } from '../erros/erro-aplicacao.js';
 import { eventoRecomendacaoGerada } from '../eventos/fabrica-eventos.js';
 import type { OrquestradorSubstituicao } from '../orchestration/orquestrador-substituicao.js';
 import type { Observador, Sujeito } from '../ports/observador.js';
@@ -37,6 +38,10 @@ export class AtualizadorComposicao implements Observador {
     if (evento.tipo !== 'CONVITE_ACEITO' && evento.tipo !== 'CONVITE_RECUSADO') {
       return;
     }
+    await comNovasTentativas(() => this.aplicarResposta(evento), 8);
+  }
+
+  private async aplicarResposta(evento: RespostaConvite): Promise<void> {
     const { projetos, sujeito } = this.dependencias;
     const { projetoId, equipeId, papel } = evento.dados;
     const projeto = await projetos.obter(projetoId);

@@ -34,6 +34,15 @@ describe('VerificadorBanco', () => {
     expect(verificador.nome).toBe('postgres');
   });
 
+  it('desiste dentro do tempo limite quando o banco demora a responder', async () => {
+    const dataSource = dataSourceFalso(true, () => new Promise(() => undefined));
+    const verificador = new VerificadorBanco(dataSource as unknown as DataSource, 20);
+    const inicio = performance.now();
+
+    await expect(verificador.verificar()).resolves.toBe(false);
+    expect(performance.now() - inicio).toBeLessThan(1_000);
+  });
+
   it('retorna falso quando o banco não responde', async () => {
     const dataSource = dataSourceFalso(true, () => Promise.reject(new Error('ECONNREFUSED')));
     const verificador = new VerificadorBanco(dataSource as unknown as DataSource);
