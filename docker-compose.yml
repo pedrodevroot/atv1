@@ -42,6 +42,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-recomendacao}
       DB_NAME: ${DB_NAME:-cinebridge_recomendacao}
       WEB_CONCURRENCY: ${WEB_CONCURRENCY:-4}
+      SEED_AO_INICIAR: ${SEED_AO_INICIAR:-true}
       DB_POOL_MAX: ${DB_POOL_MAX:-40}
       DB_TIMEOUT_MS: ${DB_TIMEOUT_MS:-5000}
     ports:
