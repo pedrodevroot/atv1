@@ -17,8 +17,12 @@ const EsquemaAmbiente = Type.Object({
   DB_PASSWORD: Type.String({ minLength: 1 }),
   DB_NAME: Type.String({ minLength: 1 }),
   DB_SCHEMA: Type.String({ pattern: '^[a-z_][a-z0-9_]{0,62}$', default: 'public' }),
-  DB_POOL_MAX: Type.Integer({ minimum: 1, maximum: 200, default: 20 }),
-  DB_TIMEOUT_MS: Type.Integer({ minimum: 100, maximum: 60000, default: 2000 }),
+  DB_POOL_MAX: Type.Integer({ minimum: 1, maximum: 200, default: 30 }),
+  DB_TIMEOUT_MS: Type.Integer({ minimum: 100, maximum: 60000, default: 5000 }),
+  CACHE_TTL_MS: Type.Integer({ minimum: 0, maximum: 86_400_000, default: 300_000 }),
+  CADASTRO_TIMEOUT_MS: Type.Integer({ minimum: 100, maximum: 120_000, default: 10_000 }),
+  CIRCUITO_LIMITE_FALHAS: Type.Integer({ minimum: 1, maximum: 100, default: 3 }),
+  CIRCUITO_ESPERA_MS: Type.Integer({ minimum: 100, maximum: 3_600_000, default: 10_000 }),
 });
 
 type Ambiente = Static<typeof EsquemaAmbiente>;
@@ -36,11 +40,19 @@ export interface ConfigBanco {
   timeoutMs: number;
 }
 
+export interface ConfigResiliencia {
+  cacheTtlMs: number;
+  cadastroTimeoutMs: number;
+  circuitoLimiteFalhas: number;
+  circuitoEsperaMs: number;
+}
+
 export interface Config {
   ambiente: (typeof AMBIENTES)[number];
   servidor: { host: string; porta: number };
   log: { nivel: NivelLog };
   banco: ConfigBanco;
+  resiliencia: ConfigResiliencia;
 }
 
 export class ErroConfiguracao extends Error {
@@ -91,6 +103,12 @@ function mapearConfig(ambiente: Ambiente): Config {
       schema: ambiente.DB_SCHEMA,
       poolMaximo: ambiente.DB_POOL_MAX,
       timeoutMs: ambiente.DB_TIMEOUT_MS,
+    },
+    resiliencia: {
+      cacheTtlMs: ambiente.CACHE_TTL_MS,
+      cadastroTimeoutMs: ambiente.CADASTRO_TIMEOUT_MS,
+      circuitoLimiteFalhas: ambiente.CIRCUITO_LIMITE_FALHAS,
+      circuitoEsperaMs: ambiente.CIRCUITO_ESPERA_MS,
     },
   };
 }

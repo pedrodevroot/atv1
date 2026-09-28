@@ -4,6 +4,7 @@ import type {
   ResultadoBusca,
 } from '../../application/ports/repositorio-profissionais.js';
 import type { Profissional } from '../../domain/entidades/profissional.js';
+import { filtrarCandidatos } from './filtro-candidatos.js';
 
 export class RepositorioProfissionaisMemoria implements RepositorioProfissionais {
   private readonly profissionais = new Map<string, Profissional>();
@@ -22,16 +23,17 @@ export class RepositorioProfissionaisMemoria implements RepositorioProfissionais
     return this.profissionais.size;
   }
 
-  buscarCandidatos(criterios: CriteriosBusca): Promise<ResultadoBusca> {
-    const excluidos = new Set(criterios.excluirIds ?? []);
-    const profissionais = [...this.profissionais.values()].filter(
-      (profissional) =>
-        profissional.ativo &&
-        !excluidos.has(profissional.id) &&
-        criterios.papeis.some((papel) => profissional.atuaComo(papel)) &&
-        profissional.faixaPreco.cabeNoOrcamento(criterios.precoMinimoAte) &&
-        profissional.disponivelEm(criterios.periodo),
+  listarAtivos(): Promise<Profissional[]> {
+    return Promise.resolve(
+      [...this.profissionais.values()].filter((profissional) => profissional.ativo),
     );
-    return Promise.resolve({ profissionais, parcial: false, avisos: [] });
+  }
+
+  buscarCandidatos(criterios: CriteriosBusca): Promise<ResultadoBusca> {
+    return Promise.resolve({
+      profissionais: filtrarCandidatos(this.profissionais.values(), criterios),
+      parcial: false,
+      avisos: [],
+    });
   }
 }

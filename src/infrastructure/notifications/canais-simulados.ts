@@ -25,12 +25,14 @@ export class ServicoEmailSimulado implements ServicoEmail {
 export class CaixaMensagensMemoria implements CaixaMensagens {
   private readonly porDestinatario = new Map<string, HistoricoLimitado<Notificacao>>();
 
-  entregar(notificacao: Notificacao): Promise<void> {
-    const caixa =
-      this.porDestinatario.get(notificacao.destinatarioId) ??
-      new HistoricoLimitado<Notificacao>(100);
-    caixa.adicionar(notificacao);
-    this.porDestinatario.set(notificacao.destinatarioId, caixa);
+  entregar(notificacoes: readonly Notificacao[]): Promise<void> {
+    for (const notificacao of notificacoes) {
+      const caixa =
+        this.porDestinatario.get(notificacao.destinatarioId) ??
+        new HistoricoLimitado<Notificacao>(100);
+      caixa.adicionar(notificacao);
+      this.porDestinatario.set(notificacao.destinatarioId, caixa);
+    }
     return Promise.resolve();
   }
 

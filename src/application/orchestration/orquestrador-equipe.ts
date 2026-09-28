@@ -147,7 +147,7 @@ export abstract class OrquestradorEquipe<
         unicos.set(profissional.id, profissional);
       }
     }
-    return [...unicos.values()].sort((a, b) => a.id.localeCompare(b.id));
+    return [...unicos.values()];
   }
 
   protected filtrarRanking(

@@ -62,7 +62,16 @@ function competenciasDoPapel(papel: Papel): string[] {
 
 const TODAS_COMPETENCIAS = [...new Set(PAPEIS.flatMap(competenciasDoPapel))];
 
+export interface ProfissionalGerado {
+  readonly profissional: Profissional;
+  readonly qualidade: number;
+}
+
 export function gerarCadastroProfissionais(total: number, semente = 2026): Profissional[] {
+  return gerarCadastroComQualidade(total, semente).map((gerado) => gerado.profissional);
+}
+
+export function gerarCadastroComQualidade(total: number, semente = 2026): ProfissionalGerado[] {
   const faker = new Faker({ locale: [pt_BR, base] });
   faker.seed(semente);
   const inteiro = (min: number, max: number) => faker.number.int({ min, max });
@@ -80,7 +89,7 @@ export function gerarCadastroProfissionais(total: number, semente = 2026): Profi
     const minimo = Math.round(inteiro(precoBase, precoTeto * 0.7) / 100) * 100;
     const maximo = Math.round((minimo * faker.number.float({ min: 1.1, max: 1.6 })) / 100) * 100;
 
-    return Profissional.criar({
+    const profissional = Profissional.criar({
       id: faker.string.uuid(),
       nome: faker.person.fullName(),
       especialidades,
@@ -133,6 +142,7 @@ export function gerarCadastroProfissionais(total: number, semente = 2026): Profi
       }),
       ativo: faker.datatype.boolean({ probability: 0.95 }),
     });
+    return { profissional, qualidade };
   });
 }
 

@@ -61,6 +61,13 @@ export class VetorCompetencia {
     return soma;
   }
 
+  aderenciaA(ideal: VetorCompetencia): number {
+    if (ideal.vazio) {
+      return 0;
+    }
+    return Math.min(1, this.produtoEscalar(ideal) / (ideal.magnitude * ideal.magnitude));
+  }
+
   similaridadeCosseno(outro: VetorCompetencia): number {
     if (this.vazio || outro.vazio) {
       return 0;

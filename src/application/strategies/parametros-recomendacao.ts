@@ -2,6 +2,7 @@ import { ErroAplicacao } from '../erros/erro-aplicacao.js';
 
 export interface ParametrosCosseno {
   pesoSimilaridade: number;
+  pesoAderencia: number;
   pesoExperiencia: number;
   experienciaSaturacao: number;
 }
@@ -51,7 +52,12 @@ export interface ParametrosRecomendacaoParciais {
 export const PARAMETROS_PADRAO: Readonly<ParametrosRecomendacao> = Object.freeze({
   topN: 5,
   folgaTetoPapel: 0.5,
-  cosseno: { pesoSimilaridade: 0.8, pesoExperiencia: 0.2, experienciaSaturacao: 5 },
+  cosseno: {
+    pesoSimilaridade: 0.3,
+    pesoAderencia: 0.5,
+    pesoExperiencia: 0.2,
+    experienciaSaturacao: 5,
+  },
   colaborativa: {
     mediaPriori: 3,
     pesoPriori: 5,
@@ -117,7 +123,12 @@ function validarParametros(parametros: ParametrosRecomendacao): void {
     }
   }
   const somasDePesos: [string, number][] = [
-    ['cosseno', parametros.cosseno.pesoSimilaridade + parametros.cosseno.pesoExperiencia],
+    [
+      'cosseno',
+      parametros.cosseno.pesoSimilaridade +
+        parametros.cosseno.pesoAderencia +
+        parametros.cosseno.pesoExperiencia,
+    ],
     [
       'orcamento',
       parametros.orcamento.pesoEconomia +

@@ -41,6 +41,7 @@ export default defineConfig({
       include: ['src/**/*.ts'],
       exclude: [
         'src/server.ts',
+        'src/cluster.ts',
         'src/infrastructure/database/scripts/**',
         'src/infrastructure/database/migrations/**',
       ],

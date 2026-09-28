@@ -1,4 +1,5 @@
 import { garantir, garantirTexto } from '../comum/erro-dominio.js';
+import { mesmoTexto } from '../comum/texto.js';
 
 const RAIO_TERRA_KM = 6371;
 
@@ -37,10 +38,7 @@ export class Localizacao {
   }
 
   mesmaCidade(outra: Localizacao): boolean {
-    return (
-      this.mesmaUf(outra) &&
-      this.cidade.localeCompare(outra.cidade, 'pt-BR', { sensitivity: 'base' }) === 0
-    );
+    return this.mesmaUf(outra) && mesmoTexto(this.cidade, outra.cidade);
   }
 
   distanciaKm(outra: Localizacao): number {

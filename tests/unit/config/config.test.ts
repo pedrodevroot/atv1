@@ -25,8 +25,14 @@ describe('carregarConfig', () => {
         senha: 'senha',
         nome: 'banco',
         schema: 'public',
-        poolMaximo: 20,
-        timeoutMs: 2000,
+        poolMaximo: 30,
+        timeoutMs: 5000,
+      },
+      resiliencia: {
+        cacheTtlMs: 300_000,
+        cadastroTimeoutMs: 10_000,
+        circuitoLimiteFalhas: 3,
+        circuitoEsperaMs: 10_000,
       },
     });
   });
